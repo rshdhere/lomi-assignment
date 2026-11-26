@@ -10,3 +10,7 @@ coverage
 bun.lock
 skills-lock.json
 next-env.d.ts
+
+# Preserve the upstream assignment and its fixtures verbatim.
+/assignment.md
+/fixtures/
