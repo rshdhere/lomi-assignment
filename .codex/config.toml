@@ -1,0 +1,3 @@
+# Project hooks are declared in hooks.json.
+[features]
+hooks = true
