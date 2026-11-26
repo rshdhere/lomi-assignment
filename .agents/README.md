@@ -9,12 +9,10 @@ Start with the [repository instructions](../AGENTS.md). Reusable project skills 
 - [Database](context/database.md)
 - [Decisions](context/decisions.md)
 - [Infrastructure](context/infrastructure.md)
-- [Linux display session](context/linux-display-session.md)
-- [Premium features](context/premium.md)
 
 ## Rules
 
-- [Architecture rules](rules/architecture.md)
+- [Package ownership and API contract](rules/architecture.md)
 - [Coding rules](rules/coding.md)
 - [Git rules](rules/git.md)
 - [Security rules](rules/security.md)

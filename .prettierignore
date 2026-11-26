@@ -1,0 +1,12 @@
+node_modules
+.agents
+.codex
+.husky
+.next
+.turbo
+dist
+build
+coverage
+bun.lock
+skills-lock.json
+next-env.d.ts

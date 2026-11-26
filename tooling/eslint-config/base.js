@@ -1,4 +1,4 @@
-import babelParser from "@babel/eslint-parser";
+import tseslint from "typescript-eslint";
 import js from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
 import turboPlugin from "eslint-plugin-turbo";
@@ -10,18 +10,11 @@ import onlyWarn from "eslint-plugin-only-warn";
  * @type {import("eslint").Linter.Config[]}
  * */
 export const config = [
+  { files: ["**/*.{ts,tsx,mts,cts,jsx}"] },
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
-    languageOptions: {
-      parser: babelParser,
-      parserOptions: {
-        requireConfigFile: false,
-        babelOptions: {
-          presets: ["@babel/preset-typescript"],
-        },
-      },
-    },
     plugins: {
       turbo: turboPlugin,
     },

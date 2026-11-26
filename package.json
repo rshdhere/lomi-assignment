@@ -4,14 +4,20 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "lint": "eslint apps packages tooling eslint.config.mjs --max-warnings 0",
+    "format": "prettier --write .",
+    "check-types": "turbo run check-types",
+    "prepare": "husky",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "prettier": "3.9.6",
     "turbo": "^2.11.13",
-    "typescript": "7.0.2"
+    "typescript": "6.0.3",
+    "@repo/eslint-config": "workspace:*",
+    "eslint": "10.9.1",
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0"
   },
   "engines": {
     "node": ">=24"
@@ -24,6 +30,19 @@
   },
   "workspaces": [
     "apps/*",
-    "packages/*"
-  ]
+    "packages/*",
+    "tooling/*"
+  ],
+  "packageManager": "bun@1.2.3",
+  "lint-staged": {
+    "{apps,packages,tooling}/**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "eslint.config.mjs": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css}": "prettier --write --ignore-unknown"
+  }
 }

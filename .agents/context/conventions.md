@@ -1,3 +1,3 @@
 # Conventions
 
-Both apps keep page styles in `page.module.css` and global styles in `globals.css`. Their ESLint and TypeScript settings draw on packages under `packages/`.
+The Next.js frontend keeps page styles in `page.module.css` and global styles in `globals.css`. Follow the [package ownership rules](../rules/architecture.md) when placing new application files.

@@ -1,3 +1,5 @@
 # Architecture
 
-Each Next.js app owns its routes under `apps/web/app` or `apps/docs/app`. Start with `page.tsx` for the home page and `layout.tsx` for the document shell. Shared React components live in `packages/ui/src`.
+The Next.js frontend lives in `apps/frontend`. Shared React components live in `packages/ui`.
+
+The backend design uses Express in `apps/backend` to serve versioned routes from `packages/api`. See the [package ownership rules](../rules/architecture.md) for the server entry points, supporting packages, and API contract.

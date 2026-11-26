@@ -1,3 +1,3 @@
 # Database
 
-The current scaffold has no database package, schema, or migrations. The workspace manifests are the starting point for checking whether a persistence layer has been introduced.
+Drizzle is the project's ORM. Start database work in `packages/drizzle` and consult the [package ownership rules](../rules/architecture.md) for the boundary between persistence, input validation, and application types.
