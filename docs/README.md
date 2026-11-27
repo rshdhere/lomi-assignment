@@ -19,6 +19,7 @@ The disposable runner was an eight-vCPU, 64 GiB EC2 instance in Northern Virgini
 - [Assignment](../assignment.md) and [extension requirements](../SPEC.md)
 - [Local setup and application overview](../README.md)
 - [Browser review walkthrough](browser-walkthrough.md)
+- [Final v3 architecture and incremental production plan](architecture-v3.md)
 - [V2 architecture after the first load test](architecture-v2.png) · [Editable Excalidraw scene](architecture-v2.excalidraw)
 - [Versioning and recovery design](adr/0001-versioned-extraction.md) · [Original architecture](architecure.png)
 - [API contract](../packages/api/openapi.yaml)
