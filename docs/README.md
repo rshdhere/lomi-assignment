@@ -26,7 +26,7 @@ The disposable runner was an eight-vCPU, 64 GiB EC2 instance in Northern Virgini
 
 ## Live load-test dashboard
 
-The isolated benchmark can stream OpenTelemetry metrics, logs and traces to Grafana. Open the live dashboard during a run to inspect intake, worker backlog, request latency and a linked API-to-worker trace in Jaeger. [Start the telemetry stack](../infra/observability/README.md)
+The isolated benchmark streams OpenTelemetry metrics, logs and traces. Grafana shows intake, worker backlog and request latency. Jaeger shows when each worker step ran for a given upload. [Start the telemetry stack](../infra/observability/README.md) · [Hosted Grafana and Jaeger captures](testing/2026-11-28/ci-acceptance.md#live-telemetry)
 
 ## Archived Grafana dashboard
 

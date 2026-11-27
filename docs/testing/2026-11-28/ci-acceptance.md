@@ -17,3 +17,15 @@ Chromium uploaded a fresh invoice, corrected its vendor, approved the remaining 
 After uploading the revised PDF, Chromium verified that the due date and total returned to pending and that three reviews carried over. Switching the version selector back to v1 showed the original correction and read-only history.
 
 ![Invoice v2 with changed fields pending and unchanged reviews carried over](ci-invoice-revised.png)
+
+## Live telemetry
+
+GitHub Actions ran an eight-invoice baseline on commit `b0c2ce95eadad5ea8154138054a4308a0c627e51` with two worker slots and a deterministic three-second model. All eight extracted. Upload-to-extracted p95 was 13.1 seconds. The application, Terraform, browser, recovery and telemetry checks passed. The first one-hour soak has its own archived measurements. [Hosted run](https://github.com/rshdhere/lomi-assignment/actions/runs/46070348250) · [Baseline JSON](live-baseline.json) · [First soak](../2026-11-27/load.md)
+
+Chromium opened Grafana as a read-only viewer. It displayed the queue rising to eight and draining, latency by route, Loki events and the recent-traces table. The capture used the measured baseline interval. [Browser query and render results](live-dashboard-render.json)
+
+![Live Grafana dashboard during the hosted baseline](live-grafana.png)
+
+Trace `90f5ca885f8ef323c24b401a47dde1b4` shows the API accepting the upload in 21.6 ms, followed by a wait of about 6.5 seconds before a worker claimed the invoice. The worker took about three seconds to read the pinned PDF, parse it, call the model and commit the result. The verifier found both services’ Loki events under the same trace ID and opened the trace in Jaeger. [Span timings and log correlation](live-telemetry.json)
+
+![Jaeger timeline showing the accepted upload, queue wait and four steps inside the worker](live-jaeger.png)

@@ -63,9 +63,9 @@ On the disposable EC2 test stack, an invoice revision recovered 93.160 seconds a
 
 The one-hour API load test on an 8-vCPU `r7i.2xlarge` completed 1,118 invoice uploads with verified evidence and a saved vendor review on each. With a deterministic three-second model and two extraction slots, the peak phase sustained 60 library and detail reads per second. Peak p95 list latency was 49.4 ms, while peak p95 upload-to-extraction time reached 134.3 s. Up to 93 invoices waited or were extracting at once. The backlog cleared during cooldown. [Load results and screenshots](tests/bench/README.md)
 
-For the next load test, the optional observability stack streams application metrics and logs into Grafana. Open a worker trace in Jaeger to follow an upload through extraction. [Live benchmark instructions](infra/observability/README.md)
+The Grafana capture below comes from a subsequent eight-invoice baseline with two worker slots. The queue grew to eight and drained. Select a trace to see when the API accepted an invoice and when the worker began processing it. [Live benchmark instructions](infra/observability/README.md) · [Jaeger trace and hosted evidence](docs/testing/2026-11-28/ci-acceptance.md#live-telemetry)
 
-![Grafana dashboard preview showing extraction backlog, latency by phase and Redis recovery during the benchmark](docs/testing/2026-11-27/grafana-dashboard.png)
+![Grafana showing the eight-invoice queue drain, API latency by route, extraction duration, application logs and recent traces](docs/testing/2026-11-28/live-grafana.png)
 
 The classifier timings cover local regex performance. The hosted Chromium test verified upload, review, revision and history with the deterministic provider. Staging fixture checks exercised the real provider through the API. A browser walkthrough of the deployed candidate, live-provider capacity measurements and a 10,000-document benchmark remain open. [Browser and recovery evidence](docs/testing/2026-11-28/ci-acceptance.md) [Classifier measurements](packages/services/README.md) · [Fixture review screenshot](apps/frontend/evidence/revision-fixture.png)
 

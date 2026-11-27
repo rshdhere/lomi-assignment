@@ -29,6 +29,8 @@ Open the [live dashboard](http://127.0.0.1:13000/d/lomi-load-live) in your brows
 
 The telemetry check queries the provisioned Jaeger panel through Grafana, finds an extraction span whose parent is the upload request, and uses that trace ID to find both services’ logs in Loki. It also checks the request, extraction and queue metrics from Prometheus.
 
+The hosted baseline captured all twelve panels and a six-span upload trace in Chromium. The evidence includes both screenshots and their underlying queries and timings. [Grafana and Jaeger captures](../../docs/testing/2026-11-28/ci-acceptance.md#live-telemetry)
+
 ## Run in GitHub Actions
 
 Once the workflow is on the default branch, open **Actions → Load-test observability → Run workflow** and select the ref to test. The default runs the eight-invoice baseline. Select **Run the full one-hour soak** to collect sustained load evidence as well. Download the run artifact for the Grafana and Jaeger screenshots, correlated spans, baseline and optional soak events. For interactive viewing during a run, use the SSH-forwarded dashboard on your disposable host. [Workflow definition](../../.github/workflows/benchmark.yml)

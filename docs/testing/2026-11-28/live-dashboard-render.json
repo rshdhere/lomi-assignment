@@ -1,0 +1,106 @@
+{
+  "url": "http://127.0.0.1:13000/d/lomi-load-live/lomi-c2b7-live-load-test?from=1795814867131&to=1795814911817&refresh=off&kiosk=1",
+  "errors": [],
+  "queries": [
+    {
+      "source": "prometheus",
+      "target": "max(lomi_queue_queued)",
+      "frames": 1,
+      "samples": 1
+    },
+    {
+      "source": "prometheus",
+      "target": "sum(rate(lomi_http_requests_total[1m]))",
+      "frames": 1,
+      "samples": 1
+    },
+    {
+      "source": "prometheus",
+      "target": "60 * sum(rate(lomi_extraction_attempts_total{outcome=\"extracted\"}[1m]))",
+      "frames": 1,
+      "samples": 1
+    },
+    {
+      "source": "prometheus",
+      "target": "histogram_quantile(0.95, sum by (le, method, route) (rate(lomi_http_request_duration_seconds_bucket[1m])))",
+      "frames": 4,
+      "samples": 6
+    },
+    {
+      "source": "prometheus",
+      "target": "max(lomi_queue_oldest_queued_seconds)",
+      "frames": 1,
+      "samples": 1
+    },
+    {
+      "source": "prometheus",
+      "target": "max(lomi_queue_queued)",
+      "frames": 1,
+      "samples": 7
+    },
+    {
+      "source": "prometheus",
+      "target": "max(lomi_queue_extracting)",
+      "frames": 1,
+      "samples": 7
+    },
+    {
+      "source": "prometheus",
+      "target": "max(lomi_queue_expired_claims)",
+      "frames": 1,
+      "samples": 7
+    },
+    {
+      "source": "prometheus",
+      "target": "histogram_quantile(0.50, sum by (le) (rate(lomi_extraction_duration_seconds_bucket{outcome=\"extracted\"}[2m])))",
+      "frames": 1,
+      "samples": 6
+    },
+    {
+      "source": "prometheus",
+      "target": "histogram_quantile(0.95, sum by (le) (rate(lomi_extraction_duration_seconds_bucket{outcome=\"extracted\"}[2m])))",
+      "frames": 1,
+      "samples": 6
+    },
+    {
+      "source": "prometheus",
+      "target": "sum by (outcome) (rate(lomi_extraction_attempts_total[1m]))",
+      "frames": 1,
+      "samples": 6
+    },
+    {
+      "source": "prometheus",
+      "target": "sum by (status_class) (rate(lomi_http_requests_total[1m]))",
+      "frames": 2,
+      "samples": 6
+    },
+    {
+      "source": "prometheus",
+      "target": "max(lomi_queue_oldest_queued_seconds)",
+      "frames": 1,
+      "samples": 7
+    },
+    {
+      "source": "jaeger",
+      "target": "lomi-worker",
+      "frames": 1,
+      "samples": 11
+    },
+    {
+      "source": "loki",
+      "target": "{service_name=~\"lomi-api|lomi-worker\"}",
+      "frames": 1,
+      "samples": 100
+    }
+  ],
+  "rendered": {
+    "viewer": {
+      "role": "Viewer",
+      "signedIn": false
+    },
+    "statistic": "10.0 req/s",
+    "chartLegend": "Queued\nExtracting\nExpired claims",
+    "logSample": "2026-11-27 21:28:18.517 INFO HTTP request completed method=POST route=/uploads scope_name=lomi status_class=4xx \n2026-11-27 21:28:18.517 INFO HTTP request completed method=POST route=/uploads scope_name=lomi status_class=4xx \n2026-11-27 21:28:18.517 INFO HTTP request completed method=POST route=/uploads scope_name=lomi status_class=4xx \n2026-11-27 ",
+    "traceSample": "Trace ID\nTrace name\nStart time\nDuration\n52e77666db71a13c1a620527c3277e04\nlomi-api: POST /documents\n2026-11-27 21:28:05.369\n14.7 ms\n895e419414ddee8536b9cd5652a99ee1\nlomi-api: POST /documents\n2026-11-27 21:28:05.365\n17.3 ms\n90f5ca885f8ef323c24b401a47dde1b4\nlomi-api: POST /documents\n2026-11-27 21:28:05.361\n21.6 ms\n4846907788f793a778533d71d2a40444\nlomi-api: POST /documents\n2026-11-27 21:28:05.355\n25.9 ms\ne0d996467fe298c0ec669ee67ace33d2\nlomi-api: POS"
+  }
+}
