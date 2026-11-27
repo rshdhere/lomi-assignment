@@ -61,7 +61,9 @@ Set the following in each selected **GitHub environment**.
 | Variable | `TF_STATE_BUCKET`     | Environment bucket from the Terraform bootstrap output |
 | Secret   | `DEPLOY_TFVARS_JSON`  | Environment inputs as a JSON object, as shown below    |
 
-Copy the deployment inputs supplied to the manual apply for that environment. Include `workload_permissions_boundary_arn` when a boundary is in use. The release checks the environment-specific state bucket and the secret name `lomi/ENV/model` before applying Terraform. [Scoped operator policies](bootstrap/staging-iam/README.md)
+The staging and production callers each pass `DEPLOY_TFVARS_JSON` by name. The deploy job selects the matching GitHub environment, which supplies that environment’s secret value. [GitHub reusable workflow secret rules](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#using-inputs-and-secrets-in-a-reusable-workflow)
+
+Copy the deployment inputs supplied to the manual apply for that environment. If the file includes `account_id` or `region`, each must match its GitHub environment variable. Include `workload_permissions_boundary_arn` when a boundary is in use. The release checks the environment-specific state bucket and the secret name `lomi/ENV/model` before applying Terraform. [Scoped operator policies](bootstrap/staging-iam/README.md)
 
 ```json
 {
