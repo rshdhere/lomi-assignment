@@ -214,6 +214,6 @@ export async function reviewedSources(
     and (${namedField} or ${reviewedText} @@ ${terms} or exists(select 1 from chunks c where
       c.chunk_id in (select jsonb_array_elements_text(${JSON.stringify(chunkIds)}::jsonb)::uuid)
       and c.version_id=v.version_id and strpos(c.text,e.quote)>0))
-    order by (${namedField}) desc,ts_rank(${reviewedText},${terms}) desc,e.field limit 20`)
+    order by ${documentId && question ? sql`(${namedField}) desc,` : sql``}ts_rank(${reviewedText},${terms}) desc,e.field limit 20`)
   ).rows;
 }

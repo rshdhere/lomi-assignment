@@ -27,9 +27,13 @@ S3 keeps the PDF bytes. Postgres records a logical document, immutable numbered 
 
 The API commits queued work in Postgres before responding. The worker offers outstanding versions to BullMQ, obtains a time-limited Postgres claim, reads the pinned PDF and calls the type-specific parser. The model proposes section boundaries in the original text. The worker embeds those sections and enriches their metadata. Values, chunks, carried reviews and the extracted state commit in one transaction. A stale claim cannot overwrite a newer attempt. A worker restart or Redis flush can cause another provider call. The version and field identities keep the persisted result unique.
 
-A field carries its prior review when its validated quote is byte-for-byte equal in both parsed versions. Moving the quote does not change its identity. If the model selects a different span, the field conservatively returns to pending. Earlier version reviews become read-only when a revision is accepted. Six-second polling keeps the document and its progress current. [Design decision](docs/adr/0001-versioned-extraction.md) · [Editable diagram](docs/architecure.excalidraw)
+A field carries its prior review when its validated quote is byte-for-byte equal in both parsed versions. Moving the quote does not change its identity. If the model selects a different span, the field conservatively returns to pending. Earlier version reviews become read-only when a revision is accepted. Six-second polling keeps the document and its progress current. [Design decision](docs/adr/0001-versioned-extraction.md)
 
-![Upload, extraction, review and retrieval architecture](docs/architecure.png)
+## Architecture after the first load test
+
+![Lomi V2 architecture showing the deployed review workflow, Redis recovery and the isolated observable benchmark](docs/architecture-v2.png)
+
+[Edit the V2 diagram in Excalidraw](docs/architecture-v2.excalidraw) · [Original architecture](docs/architecure.png)
 
 ## Code and verification
 
@@ -57,7 +61,7 @@ On the disposable EC2 test stack, an invoice revision recovered 93.160 seconds a
 
 The one-hour API load test on an 8-vCPU `r7i.2xlarge` completed 1,118 invoice uploads with verified evidence and a saved vendor review on each. With a deterministic three-second model and two extraction slots, the peak phase sustained 60 library and detail reads per second. Peak p95 list latency was 49.4 ms, while peak p95 upload-to-extraction time reached 134.3 s. Up to 93 invoices waited or were extracting at once. The backlog cleared during cooldown. [Load results and screenshots](tests/bench/README.md)
 
-For the next load test, the optional observability stack streams application metrics and logs into Grafana. Open a worker trace in Jaeger to follow an upload through extraction. [Live benchmark instructions](docs/observability/README.md)
+For the next load test, the optional observability stack streams application metrics and logs into Grafana. Open a worker trace in Jaeger to follow an upload through extraction. [Live benchmark instructions](infra/observability/README.md)
 
 ![Grafana dashboard preview showing extraction backlog, latency by phase and Redis recovery during the benchmark](docs/testing/2026-11-27/grafana-dashboard.png)
 

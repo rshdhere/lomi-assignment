@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 90
     env:
       COMPOSE_PROJECT_NAME: lomi-bench
-      COMPOSE_FILE: compose.yaml:tests/integration/compose.yaml:docs/observability/compose.yaml
+      COMPOSE_FILE: compose.yaml:tests/integration/compose.yaml:infra/observability/compose.yaml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -51,6 +51,13 @@ jobs:
           dashboard_path=$(jq -er .dashboardPath benchmark-results/telemetry.json)
           first_panel=$(jq -er .firstPanel benchmark-results/telemetry.json)
           pnpm --filter web exec playwright screenshot --browser chromium --viewport-size "1600,1050" --full-page --wait-for-selector "text=$first_panel" --wait-for-timeout 5000 "http://127.0.0.1:13000$dashboard_path?from=now-75m&to=now&kiosk" "$GITHUB_WORKSPACE/benchmark-results/grafana.png"
+          report=benchmark-results/telemetry.json
+          if [[ -s benchmark-results/telemetry-after-soak.json ]]; then report=benchmark-results/telemetry-after-soak.json; fi
+          trace_id=$(jq -er .traceID "$report")
+          pnpm --filter web exec playwright screenshot --browser chromium --viewport-size "1600,1050" --wait-for-selector "text=extract version" "http://127.0.0.1:16686/trace/$trace_id" "$GITHUB_WORKSPACE/benchmark-results/jaeger.png"
+      - name: Diagnose telemetry startup or export failures
+        if: failure()
+        run: docker compose logs --no-color --tail=50 otel-collector prometheus loki jaeger grafana backend worker
       - name: Upload benchmark evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f

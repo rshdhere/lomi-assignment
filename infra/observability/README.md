@@ -1,6 +1,6 @@
 # Live load-test dashboard
 
-The disposable `lomi-bench` stack sends API and worker telemetry over OTLP/HTTP to the OpenTelemetry Collector. Prometheus scrapes the Collector every five seconds, Loki stores application events and Jaeger stores traces. Grafana provisions all three data sources and the live dashboard at startup. The historical November 27 measurements have a separate [recorded dashboard](../testing/2026-11-27/grafana-dashboard.json).
+The disposable `lomi-bench` stack sends API and worker telemetry over OTLP/HTTP to the OpenTelemetry Collector. Prometheus scrapes the Collector every five seconds, Loki stores application events and Jaeger stores traces. Grafana provisions all three data sources and the live dashboard at startup. The historical November 27 measurements have a separate [recorded dashboard](../../docs/testing/2026-11-27/grafana-dashboard.json).
 
 ## Run on a disposable cloud host
 
@@ -8,25 +8,24 @@ Use the exact checkout under test with Docker Compose and Node 24. The integrati
 
 ```sh
 bench() {
-  docker compose -p lomi-bench -f compose.yaml -f tests/integration/compose.yaml -f docs/observability/compose.yaml "$@"
+  docker compose -p lomi-bench -f compose.yaml -f tests/integration/compose.yaml -f infra/observability/compose.yaml "$@"
 }
 
 bench up -d --build
 curl --retry 60 --retry-all-errors --retry-delay 2 --fail --silent --show-error http://127.0.0.1:13000/api/health
 node tests/bench/load.mjs > load-results.json
 node tests/bench/verify-observability.mjs > telemetry.json
-node tests/bench/verify-observability.mjs > telemetry.json
 sleep 61
 node tests/bench/soak.mjs > soak.jsonl
 ```
 
-While the benchmark runs, open an SSH port forward in a second terminal on your workstation, using the SSH identity and hostname of your test machine.
+While the benchmark runs, forward the two UI ports over SSH in a second terminal on your workstation, using the SSH identity and hostname of your test machine.
 
 ```sh
-ssh -N -L 13000:127.0.0.1:13000 user@benchmark-host
+ssh -N -L 13000:127.0.0.1:13000 -L 16686:127.0.0.1:16686 user@benchmark-host
 ```
 
-Open the [live dashboard](http://127.0.0.1:13000/d/lomi-load-live) in your browser. The loopback port grants read-only access to the dashboard and its provisioned data sources. Application containers reach the Collector on the project's Docker network. The application also runs independently with the original Compose configuration.
+Open the [live dashboard](http://127.0.0.1:13000/d/lomi-load-live) in your browser. Grafana serves the dashboard and its provisioned data sources to a read-only viewer. The second loopback port serves the [native Jaeger trace viewer](http://127.0.0.1:16686/). Application containers reach the Collector on the project's Docker network. The application also runs independently with the original Compose configuration.
 
 The telemetry check queries Prometheus, Loki and Jaeger through Grafana. It verifies that both services emitted logs, metrics have arrived, and an extraction span references its upload request. For a hosted run, dispatch the [Load-test observability workflow](../../.github/workflows/benchmark.yml) on the candidate commit. Select the full-hour option for the soak. Its artifacts include the image of the provisioned dashboard and the signal checks.
 
@@ -38,7 +37,7 @@ Open **Actions → Load-test observability → Run workflow**. The default runs 
 
 - **Intake and backlog.** Compare the number of queued versions with the age of the oldest queued version. Postgres supplies the gauges. An increasing age during steady intake means reviewers are waiting longer for a free extraction slot. Expired claims are eligible for reconciliation.
 - **Reads and extraction.** API p95 is grouped by route and method. Worker p50 and p95 cover successful extraction processing. Compare these with the client-observed upload-to-extracted time in `soak.jsonl` to see how queueing and polling affect reviewer wait time. Rates and percentiles need consecutive scrapes. Quiet phases can show an empty series.
-- **Logs and traces.** Expand an entry under **API and worker events**, then select **Open trace in Jaeger**. **Recent extraction traces** searches the worker service directly. For an instrumented upload, open the trace to inspect the request and the extraction across the queue boundary. The log pipeline carries the application’s structured telemetry events.
+- **Logs and traces.** Expand an entry under **API and worker events**, then select **Open trace in Jaeger** to view its span timeline in the native UI. **Recent extraction traces** searches the worker service directly. For an instrumented upload, open the trace to inspect the request and the extraction across the queue boundary. The log pipeline carries the application’s structured telemetry events.
 - **Evidence.** Choose an absolute UTC time range covering the run before capturing the dashboard. Save the screenshot and the client result files alongside the tested commit, worker concurrency and host configuration. At high request rates Jaeger evicts the oldest traces, so capture interesting traces during the peak.
 
 ## Storage and shutdown
@@ -54,5 +53,5 @@ Named volumes survive this command and can be read again on the same machine by 
 ## Configuration references
 
 - The Collector protocol receivers and exporters use the pinned [OpenTelemetry Collector Contrib release](https://github.com/open-telemetry/opentelemetry-collector-releases/releases/tag/v0.166.0). Prometheus queries use the Collector’s [metric name translation](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/v0.166.0/exporter/prometheusexporter/README.md).
-- Loki uses native [OTLP ingestion](https://grafana.com/docs/loki/latest/send-data/otel/) with a v13 schema. Grafana correlates a log record’s trace ID with its [Jaeger data source](https://grafana.com/docs/grafana/latest/datasources/jaeger/).
+- Loki uses native [OTLP ingestion](https://grafana.com/docs/loki/latest/send-data/otel/) with a v13 schema. Grafana uses a [Loki derived field](https://grafana.com/docs/grafana/latest/datasources/loki/configure-loki-data-source/#derived-fields) to open the native Jaeger UI for the selected trace ID.
 - Jaeger uses the release’s [all-in-one memory backend](https://github.com/jaegertracing/jaeger/blob/v2.23.0/cmd/jaeger/internal/all-in-one.yaml) with a smaller trace limit for the test host.

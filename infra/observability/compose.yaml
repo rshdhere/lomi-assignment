@@ -21,23 +21,24 @@ services:
     image: otel/opentelemetry-collector-contrib:0.166.0@sha256:3e18fe04181de50bdd72e23ad4a4d6214b54351e63d496f1c58127cc4541ad7f
     command: [--config=/etc/otelcol-contrib/lomi.yaml]
     volumes:
-      - ./docs/observability/collector.yaml:/etc/otelcol-contrib/lomi.yaml:ro
+      - ./infra/observability/collector.yaml:/etc/otelcol-contrib/lomi.yaml:ro
 
   prometheus:
     image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
     volumes:
-      - ./docs/observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - bench-metrics:/prometheus
 
   loki:
     image: grafana/loki:3.7.11@sha256:4c86f2ad5003304c8da84d29da2279b04eb999d716f8089c88e4fa4a44b0781e
     command: [-config.file=/etc/loki/lomi.yaml]
     volumes:
-      - ./docs/observability/loki.yaml:/etc/loki/lomi.yaml:ro
+      - ./infra/observability/loki.yaml:/etc/loki/lomi.yaml:ro
       - bench-logs:/loki
 
   jaeger:
     image: jaegertracing/jaeger:2.23.0@sha256:3823829974ccfc2485d2e48b165579091f32295022ae80ca49704e2f4834116e
+    ports: ["127.0.0.1:16686:16686"]
     environment:
       JAEGER_LISTEN_HOST: 0.0.0.0
     command:
@@ -57,9 +58,9 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/lomi/dashboards/load.json
     volumes:
-      - ./docs/observability/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./docs/observability/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./docs/observability/dashboards:/etc/lomi/dashboards:ro
+      - ./infra/observability/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/observability/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./infra/observability/dashboards:/etc/lomi/dashboards:ro
 
 volumes:
   bench-metrics:
