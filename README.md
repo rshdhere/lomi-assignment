@@ -31,9 +31,13 @@ A field carries its prior review when its validated quote is byte-for-byte equal
 
 ## Architecture after the first load test
 
-At peak, the benchmark accepted 44 PDFs per minute and completed 39.7 per minute. The V2 diagram shows where that difference accumulates and how to investigate it. Follow the numbered upload path to the worker, then follow the trace through PDF reading, parsing, model extraction and the final Postgres commit. [First load-test measurements](docs/testing/2026-11-27/load.md)
+Follow an invoice along two paths in the diagram. **Field review** starts with the versioned PDF in S3. The worker reads its full text, asks the invoice parser for the expected fields and checks each quote against that version. The reviewer can then correct a field and see whether its evidence survives the next revision. [Assignment](assignment.md)
 
-![Lomi V2 architecture showing the deployed review workflow, Redis recovery and the isolated observable benchmark](docs/architecture-v2.png)
+**Ask documents** uses retrieval-augmented generation (RAG). The parser proposes section boundaries. The worker slices the original text at those boundaries, embeds each chunk and records which verified fields it contains. A question about an invoice number can use full-text search. A paraphrased question can use vector similarity. Both searches return versioned evidence, and the answer gives reviewed corrections precedence. [RAG extension](SPEC.md) · [Design and trade-offs](docs/adr/0001-versioned-extraction.md)
+
+The first soak explains why the diagram shows a queue between acceptance and extraction. At peak, the benchmark accepted 44 PDFs per minute and completed 39.7 per minute. Queue depth and age show the wait. A trace shows how long the worker spent parsing, calling the model and committing the result. [Load-test measurements](docs/testing/2026-11-27/load.md)
+
+![Lomi architecture from PDF upload on EC2 and S3 through Redis-backed extraction, evidence review, section indexing and retrieval-augmented answers](docs/architecture-v2.png)
 
 To edit the diagram, download the scene and open it with **Excalidraw → Open**. [V2 Excalidraw source](docs/architecture-v2.excalidraw) · [Original architecture](docs/architecure.png)
 
