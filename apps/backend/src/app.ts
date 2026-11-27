@@ -1,13 +1,12 @@
-import { httpTelemetry } from "@repo/common/telemetry";
+import type { httpTelemetry } from "@repo/common/telemetry";
 import cors from "cors";
 import express from "express";
 import { api, errorResponse } from "@repo/api";
 import { config } from "@repo/config";
 
-export function createApp(telemetryEnabled = false) {
+export function createApp(startRequest?: ReturnType<typeof httpTelemetry>) {
   const app = express();
-  if (telemetryEnabled) {
-    const startRequest = httpTelemetry();
+  if (startRequest) {
     app.use((req, res, next) => {
       const request = startRequest(req.method);
       res.once("close", () => {

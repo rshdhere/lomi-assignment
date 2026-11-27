@@ -27,11 +27,11 @@ ssh -N -L 13000:127.0.0.1:13000 -L 16686:127.0.0.1:16686 user@benchmark-host
 
 Open the [live dashboard](http://127.0.0.1:13000/d/lomi-load-live) in your browser. Grafana serves the dashboard and its provisioned data sources to a read-only viewer. The second loopback port serves the [native Jaeger trace viewer](http://127.0.0.1:16686/). Application containers reach the Collector on the project's Docker network. The application also runs independently with the original Compose configuration.
 
-The telemetry check queries Prometheus, Loki and Jaeger through Grafana. It verifies that both services emitted logs, metrics have arrived, and an extraction span references its upload request. For a hosted run, dispatch the [Load-test observability workflow](../../.github/workflows/benchmark.yml) on the candidate commit. Select the full-hour option for the soak. Its artifacts include the image of the provisioned dashboard and the signal checks.
+The telemetry check queries the provisioned Jaeger panel through Grafana, finds an extraction span whose parent is the upload request, and uses that trace ID to find both services’ logs in Loki. It also checks the request, extraction and queue metrics from Prometheus.
 
 ## Run in GitHub Actions
 
-Open **Actions → Load-test observability → Run workflow**. The default runs the eight-invoice baseline, queries all three backends through Grafana, checks that an upload span and its worker span share a trace, and captures the rendered dashboard in Chromium. Select **Run the full one-hour soak** to collect sustained load evidence as well. Download the run artifact for its screenshot, trace ID, baseline and optional soak events. For interactive viewing during a run, use the SSH-forwarded dashboard on your disposable host.
+Once the workflow is on the default branch, open **Actions → Load-test observability → Run workflow** and select the ref to test. The default runs the eight-invoice baseline. Select **Run the full one-hour soak** to collect sustained load evidence as well. Download the run artifact for the Grafana and Jaeger screenshots, correlated spans, baseline and optional soak events. For interactive viewing during a run, use the SSH-forwarded dashboard on your disposable host. [Workflow definition](../../.github/workflows/benchmark.yml)
 
 ## Read the panels
 

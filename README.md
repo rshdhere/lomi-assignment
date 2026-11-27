@@ -31,9 +31,11 @@ A field carries its prior review when its validated quote is byte-for-byte equal
 
 ## Architecture after the first load test
 
+At peak, the benchmark accepted 44 PDFs per minute and completed 39.7 per minute. The V2 diagram shows where that difference accumulates and how to investigate it. Follow the numbered upload path to the worker, then follow the trace through PDF reading, parsing, model extraction and the final Postgres commit. [First load-test measurements](docs/testing/2026-11-27/load.md)
+
 ![Lomi V2 architecture showing the deployed review workflow, Redis recovery and the isolated observable benchmark](docs/architecture-v2.png)
 
-[Edit the V2 diagram in Excalidraw](docs/architecture-v2.excalidraw) · [Original architecture](docs/architecure.png)
+To edit the diagram, download the scene and open it with **Excalidraw → Open**. [V2 Excalidraw source](docs/architecture-v2.excalidraw) · [Original architecture](docs/architecure.png)
 
 ## Code and verification
 

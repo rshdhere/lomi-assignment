@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import multer from "multer";
 import { HttpError } from "@repo/common";
 import { config } from "@repo/config";
@@ -57,40 +57,36 @@ async function revision(id: string) {
   return doc;
 }
 
-uploads.post(
-  ["/documents", "/documents/:id/versions"],
-  uploadLimit,
-  multipart,
-  async (req, res) => {
-    const file = req.file;
-    if (!file)
-      throw new HttpError(400, "Provide one PDF in the file form field");
-    filename.parse(file.originalname);
-    if (file.mimetype !== "application/pdf")
-      throw new HttpError(415, "Use application/pdf for the file part");
-    const id =
-      req.params.id === undefined ? undefined : identifier.parse(req.params.id);
-    const prior = id ? await revision(id) : undefined;
-    const fields = (prior ? revisionFields : uploadFields).parse(req.body);
-    if (prior && fields.type && fields.type !== prior.type)
-      throw new HttpError(
-        409,
-        "The revision must use the existing document type",
-      );
-    const key = objectKey();
-    const stored = await putPdf(key, file.buffer);
-    const [document] = await createBatch([
-      {
-        id,
-        key,
-        ...stored,
-        title: prior?.title ?? fields.title ?? file.originalname,
-        type: fields.type ?? prior?.type ?? null,
-      },
-    ]);
-    res.status(202).location(`/documents/${document.id}`).json(document);
-  },
-);
+const receivePdf: RequestHandler = async (req, res) => {
+  const file = req.file;
+  if (!file) throw new HttpError(400, "Provide one PDF in the file form field");
+  filename.parse(file.originalname);
+  if (file.mimetype !== "application/pdf")
+    throw new HttpError(415, "Use application/pdf for the file part");
+  const id =
+    req.params.id === undefined ? undefined : identifier.parse(req.params.id);
+  const prior = id ? await revision(id) : undefined;
+  const fields = (prior ? revisionFields : uploadFields).parse(req.body);
+  if (prior && fields.type && fields.type !== prior.type)
+    throw new HttpError(
+      409,
+      "The revision must use the existing document type",
+    );
+  const key = objectKey();
+  const stored = await putPdf(key, file.buffer);
+  const [document] = await createBatch([
+    {
+      id,
+      key,
+      ...stored,
+      title: prior?.title ?? fields.title ?? file.originalname,
+      type: fields.type ?? prior?.type ?? null,
+    },
+  ]);
+  res.status(202).location(`/documents/${document.id}`).json(document);
+};
+uploads.post("/documents", uploadLimit, multipart, receivePdf);
+uploads.post("/documents/:id/versions", uploadLimit, multipart, receivePdf);
 
 uploads.post("/uploads", uploadLimit, async (req, res) => {
   const { files } = batchManifest(

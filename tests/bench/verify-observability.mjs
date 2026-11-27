@@ -73,16 +73,28 @@ async function verify() {
     } = await request(base + "jaeger/api/traces/" + id);
     if (!candidate) continue;
     const service = (span) => candidate.processes[span.processID]?.serviceName;
+    const publishingRoutes = [
+      "POST /documents",
+      "POST /documents/:id/versions",
+      "POST /uploads/:batchId/complete",
+    ];
     const apiSpans = new Set(
       candidate.spans
-        .filter((s) => service(s) === "lomi-api")
+        .filter(
+          (s) =>
+            service(s) === "lomi-api" &&
+            publishingRoutes.includes(s.operationName),
+        )
         .map((s) => s.spanID),
     );
     if (
       candidate.spans.some(
         (s) =>
           service(s) === "lomi-worker" &&
-          s.references.some((ref) => apiSpans.has(ref.spanID)),
+          s.operationName === "extract version" &&
+          s.references.some(
+            (ref) => ref.refType === "CHILD_OF" && apiSpans.has(ref.spanID),
+          ),
       )
     ) {
       trace = candidate;
@@ -108,7 +120,7 @@ async function verify() {
   return {
     dashboard: dashboard.uid,
     dashboardPath: meta.url,
-    firstPanel: dashboard.panels.find((panel) => panel.type !== "row").title,
+    verifiedAt: new Date().toISOString(),
     metrics,
     correlatedLogTimes,
     jaegerPanelRows: traceIDs.length,

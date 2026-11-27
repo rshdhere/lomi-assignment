@@ -1,8 +1,8 @@
-import { startTelemetry } from "@repo/common/telemetry";
+import { httpTelemetry, startTelemetry } from "@repo/common/telemetry";
 import { config } from "@repo/config";
 import { createApp } from "./app.ts";
 const telemetry = await startTelemetry("lomi-api");
-const server = createApp(Boolean(telemetry)).listen(
+const server = createApp(telemetry ? httpTelemetry() : undefined).listen(
   config.port,
   "0.0.0.0",
   () => {
