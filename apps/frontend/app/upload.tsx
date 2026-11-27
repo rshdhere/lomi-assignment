@@ -142,19 +142,22 @@ export function Upload({
       close={close}
       busy={busy}
     >
-      <form onSubmit={submit}>
-        <p className="muted">
+      <form className="sheet-form" onSubmit={submit}>
+        <p className="sheet-description">
           {documentId
             ? "Earlier versions and their reviews stay available."
             : "Send a batch of PDFs and review each document as extraction finishes."}
         </p>
-        <label className="file-picker">
-          <span>
+        <label className="sheet-picker">
+          <span aria-hidden="true" className="sheet-file-mark" />
+          <span className="sheet-picker-title" id="upload-picker-label">
             {documentId ? "Choose a revised PDF" : "Choose PDF files"}
           </span>
           <input
             type="file"
             accept="application/pdf,.pdf"
+            aria-labelledby="upload-picker-label"
+            aria-describedby="upload-picker-limits"
             multiple={!documentId}
             disabled={busy || !limits}
             onChange={(e) => {
@@ -162,12 +165,22 @@ export function Upload({
               e.currentTarget.value = "";
             }}
           />
-          {limits && (
-            <small>
-              Up to {Math.round((limits.maxFileBytes / 1024 / 1024) * 10) / 10}{" "}
-              MiB per file{!documentId && `, ${limits.maxBatchFiles} per batch`}
-            </small>
-          )}
+          <small id="upload-picker-limits">
+            {limits ? (
+              <>
+                Up to{" "}
+                {Math.round((limits.maxFileBytes / 1024 / 1024) * 10) / 10} MiB
+                per file{!documentId && `, ${limits.maxBatchFiles} per batch`}
+              </>
+            ) : message ? (
+              "Upload limits unavailable"
+            ) : (
+              "Checking upload limits…"
+            )}
+          </small>
+          <span className="picker-arrow" aria-hidden="true">
+            ↑
+          </span>
         </label>
         {!limits && message && (
           <button
@@ -181,13 +194,16 @@ export function Upload({
           </button>
         )}
         {entries.length > 0 && (
-          <ul className="upload-list">
+          <ul className="sheet-files" role="list">
             {entries.map((entry, i) => (
               <li key={i}>
-                <span>
-                  {entry.file.name}
-                  {entry.stored && <small>Stored</small>}
-                </span>
+                <div className="sheet-file-name">
+                  <strong>{entry.file.name}</strong>
+                  <small>
+                    {Math.ceil(entry.file.size / 1024).toLocaleString()} KiB
+                    {entry.stored && " · Stored"}
+                  </small>
+                </div>
                 {!documentId && (
                   <select
                     aria-label={`Document type for ${entry.file.name}`}
@@ -228,8 +244,12 @@ export function Upload({
             {message}
           </p>
         )}
-        {step && <p role="status">{step}</p>}
-        <footer className="actions">
+        {step && (
+          <p className="upload-progress" role="status">
+            {step}
+          </p>
+        )}
+        <footer className="sheet-actions">
           <button type="button" disabled={busy} onClick={close}>
             Cancel
           </button>

@@ -103,6 +103,9 @@ jobs:
             apps/frontend/evidence/report-gap.png
             apps/frontend/evidence/invoice-reviewed.png
             apps/frontend/evidence/invoice-revised.png
+            apps/frontend/evidence/workspace-desktop.png
+            apps/frontend/evidence/workspace-mobile.png
+            apps/frontend/evidence/query-mobile.png
             apps/frontend/.next/playwright-results/**/error-context.md
           include-hidden-files: true
           if-no-files-found: ignore

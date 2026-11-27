@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import "./dialogs.css";
 
 export function Modal({
   title,
@@ -14,28 +15,35 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
+    const trigger = document.activeElement;
     dialog?.showModal();
-    return () => dialog?.close();
+    return () => {
+      dialog?.close();
+      if (trigger instanceof HTMLElement && trigger.isConnected) {
+        trigger.focus({ preventScroll: true });
+      }
+    };
   }, []);
   return (
     <dialog
       ref={ref}
+      className="workspace-dialog"
       aria-labelledby="dialog-title"
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) close();
       }}
     >
-      <header className="dialog-header">
+      <header className="sheet-heading">
         <h2 id="dialog-title">{title}</h2>
         <button
           type="button"
           aria-label="Close dialog"
-          className="icon-button"
+          className="sheet-close"
           disabled={busy}
           onClick={close}
         >
-          ×
+          <span aria-hidden="true" />
         </button>
       </header>
       {children}

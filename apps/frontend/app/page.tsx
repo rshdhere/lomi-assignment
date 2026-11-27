@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   DocumentDetail,
   DocumentSummary,
@@ -10,6 +10,7 @@ import { api, errorMessage, post, typeLabels } from "./client";
 import { Ask } from "./ask";
 import { ReviewField } from "./review";
 import { Upload } from "./upload";
+import { WorkspaceIcon } from "./workspace-icon";
 
 const statusLabels = {
   queued: "Queued",
@@ -96,40 +97,46 @@ function Detail({
   }
   return (
     <>
-      <div className="doc-tools">
-        <span className="doc-kind">{typeLabels[doc.type]}</span>
-        <label className="version-label">
-          Viewing{" "}
-          <select
-            aria-label="Document version"
-            value={version ?? ""}
-            onChange={(e) =>
-              setVersion(e.target.value ? Number(e.target.value) : null)
-            }
+      <header className="document-summary">
+        <div className="summary-status">
+          <span className="doc-kind">
+            <WorkspaceIcon name="document" />
+            {typeLabels[doc.type]}
+          </span>
+          <span className={`state ${doc.status}`}>
+            {statusLabels[doc.status]}
+          </span>
+        </div>
+        <h2 className="document-title">{doc.title}</h2>
+        <div className="doc-tools">
+          <label className="version-label">
+            Viewing
+            <select
+              aria-label="Document version"
+              value={version === latest ? "" : (version ?? "")}
+              onChange={(e) =>
+                setVersion(e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">Latest (v{latest})</option>
+              {doc.versions
+                .filter((n) => n !== latest)
+                .map((n) => (
+                  <option key={n} value={n}>
+                    Version {n}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <button
+            onClick={upload}
+            disabled={["queued", "extracting"].includes(doc.status) || !current}
           >
-            <option value="">Latest (v{latest})</option>
-            {doc.versions
-              .filter((n) => n !== latest)
-              .map((n) => (
-                <option key={n} value={n}>
-                  Version {n}
-                </option>
-              ))}
-          </select>
-        </label>
-      </div>
-      <h1>{doc.title}</h1>
-      <div className="detail-meta">
-        <span className={`state ${doc.status}`}>
-          {statusLabels[doc.status]}
-        </span>
-        <button
-          onClick={upload}
-          disabled={["queued", "extracting"].includes(doc.status) || !current}
-        >
-          Upload revision
-        </button>
-      </div>
+            <WorkspaceIcon name="upload" />
+            Upload revision
+          </button>
+        </div>
+      </header>
       {doc.status === "failed" && (
         <section className="failure">
           <h2>Extraction failed</h2>
@@ -204,6 +211,12 @@ export default function Home() {
     null,
   );
   const [change, setChange] = useState(0);
+  const [filter, setFilter] = useState("");
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const actions = useRef<HTMLDivElement>(null);
+  const actionsToggle = useRef<HTMLButtonElement>(null);
+  const detailRegion = useRef<HTMLElement>(null);
   const list = useResource<{ documents: DocumentSummary[] }>(
     "/documents",
     change,
@@ -235,86 +248,247 @@ export default function Home() {
     );
   }
 
+  useEffect(() => {
+    if (!actionsOpen) return;
+    function dismissOutside(event: PointerEvent) {
+      if (
+        event.target instanceof Node &&
+        !actions.current?.contains(event.target)
+      )
+        setActionsOpen(false);
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setActionsOpen(false);
+        actionsToggle.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [actionsOpen]);
+  function openAction(which: "ask" | "upload") {
+    if (actionsOpen) actionsToggle.current?.focus();
+    setActionsOpen(false);
+    setModal(which);
+  }
+  const query = filter.trim().toLowerCase();
+  const visibleDocs = docs?.filter((item) =>
+    `${item.title} ${typeLabels[item.type]}`.toLowerCase().includes(query),
+  );
   return (
     <>
       <a className="skip" href="#document-detail">
         Skip to document review
       </a>
       <header className="mast">
-        <div className="brand" aria-label="Lomi">
-          <span aria-hidden="true" className="brand-mark" />
-          Lomi
-        </div>
-        <span className="brand-area">Review workspace</span>
-        <div className="mast-actions">
-          <button onClick={() => setModal("ask")}>Ask documents</button>
-          <button className="primary" onClick={() => setModal("upload")}>
-            Upload PDFs
-          </button>
+        <div className="mast-inner">
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            Lomi Labs
+          </div>
+          <div className="action-nav" ref={actions}>
+            <button
+              type="button"
+              className="actions-toggle"
+              aria-controls="workspace-actions"
+              aria-expanded={actionsOpen}
+              ref={actionsToggle}
+              onClick={() => setActionsOpen(!actionsOpen)}
+            >
+              <WorkspaceIcon name={actionsOpen ? "close" : "menu"} />
+              Actions
+            </button>
+            <div
+              id="workspace-actions"
+              className={`mast-actions${actionsOpen ? " open" : ""}`}
+            >
+              <button onClick={() => openAction("ask")}>
+                <WorkspaceIcon name="ask" />
+                Ask documents
+              </button>
+              <button
+                className="primary upload-action"
+                onClick={() => openAction("upload")}
+              >
+                Upload PDFs
+                <span className="mint-disc">
+                  <WorkspaceIcon name="plus" />
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       </header>
-      <main className="workspace">
-        <aside className="library">
-          <div className="library-heading">
-            <h2>Documents</h2>
-            {docs && <span>{docs.length}</span>}
+      <main className="workspace" id="workspace">
+        <header className="workspace-intro">
+          <div className="intro-copy">
+            <h1>Review workspace</h1>
+            <p>
+              Check extracted values against their source passages. Approve the
+              evidence or record a correction.
+            </p>
           </div>
-          {list?.error && connectionError(list.error)}
-          {!docs && !list?.error && <p role="status">Loading documents…</p>}
-          {!docs?.length && list?.data && (
-            <p>Upload a PDF to start a review.</p>
-          )}
-          <nav aria-label="Document library">
-            {docs?.map((item) => (
-              <button
-                key={item.id}
-                className={`document-link ${item.id === id ? "selected" : ""}`}
-                aria-current={item.id === id ? "page" : undefined}
-                onClick={() => choose(item.id)}
-              >
-                <span className="file-meta">
-                  {typeLabels[item.type]} <span>v{item.version}</span>
-                </span>
-                <strong>{item.title}</strong>
-                <span className={`state ${item.status}`}>
-                  {statusLabels[item.status]}
-                </span>
-                {item.status === "extracted" && (
-                  <small>{progressText(item.progress)}</small>
-                )}
-              </button>
-            ))}
-          </nav>
-        </aside>
-        <section
-          className="detail"
-          id="document-detail"
-          tabIndex={-1}
-          aria-label="Document review"
-        >
-          {detail?.error && connectionError(detail.error)}
-          {doc ? (
-            <Detail
-              key={`${id}/${doc.version}`}
-              doc={doc}
-              latest={Math.max(doc.version, ...doc.versions)}
-              version={version}
-              setVersion={setVersion}
-              upload={() => setModal("revision")}
-              refresh={refresh}
-            />
-          ) : (
-            <div className="empty">
-              <span aria-hidden="true" className="paper-icon" />
-              <h1>{id ? "Opening document" : "Document review"}</h1>
-              <p>
-                {id
-                  ? "Fetching the version and its evidence."
-                  : "Select a document to review extracted values beside their source passages."}
-              </p>
+          <div className="folio-art" aria-hidden="true">
+            <span className="contour contour-outer" />
+            <span className="contour contour-middle" />
+            <span className="contour contour-inner" />
+            <div className="folio">
+              <i className="sheet sheet-back" />
+              <i className="sheet sheet-middle" />
+              <i className="sheet sheet-front">
+                <b />
+                <b />
+                <b />
+                <b />
+              </i>
             </div>
-          )}
-        </section>
+          </div>
+        </header>
+        <div className="workspace-grid">
+          <aside className={`library${libraryOpen ? " expanded" : ""}`}>
+            <div className="library-heading">
+              <h2>
+                <WorkspaceIcon name="folder" />
+                Documents
+              </h2>
+              {docs && <span className="library-count">{docs.length}</span>}
+              <button
+                className="library-toggle"
+                type="button"
+                aria-controls="library-content"
+                aria-expanded={libraryOpen}
+                onClick={() => setLibraryOpen(!libraryOpen)}
+              >
+                {libraryOpen ? "Hide" : "Browse"}
+                <WorkspaceIcon name="chevron" />
+              </button>
+            </div>
+            <div className="library-content" id="library-content">
+              {list?.error && connectionError(list.error)}
+              {!docs && !list?.error && (
+                <p className="library-message" role="status">
+                  Loading documents…
+                </p>
+              )}
+              {!docs?.length && list?.data && (
+                <p className="library-message">
+                  Uploaded PDFs will appear here.
+                </p>
+              )}
+              {Boolean(docs?.length) && (
+                <label className="library-search">
+                  <WorkspaceIcon name="search" />
+                  <input
+                    type="search"
+                    aria-label="Find a document"
+                    placeholder="Find a document"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                  />
+                </label>
+              )}
+              <nav aria-label="Document library">
+                {visibleDocs?.map((item) => (
+                  <button
+                    key={item.id}
+                    className={`document-link ${item.id === id ? "selected" : ""}`}
+                    aria-current={item.id === id ? "page" : undefined}
+                    onClick={() => {
+                      choose(item.id);
+                      if (libraryOpen)
+                        detailRegion.current?.focus({ preventScroll: true });
+                      setLibraryOpen(false);
+                    }}
+                  >
+                    <span className="file-meta">
+                      <span>
+                        <WorkspaceIcon name="document" />
+                        {typeLabels[item.type]}
+                      </span>
+                      <span>v{item.version}</span>
+                    </span>
+                    <strong>{item.title}</strong>
+                    <span className="library-progress">
+                      <span className={`state ${item.status}`}>
+                        {statusLabels[item.status]}
+                      </span>
+                      {item.status === "extracted" && (
+                        <small>{progressText(item.progress)}</small>
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </nav>
+              {docs?.length && visibleDocs?.length === 0 ? (
+                <p className="library-message" role="status">
+                  No matching documents.
+                </p>
+              ) : null}
+            </div>
+          </aside>
+          <section
+            className="detail"
+            id="document-detail"
+            ref={detailRegion}
+            tabIndex={-1}
+            aria-label="Document review"
+          >
+            {detail?.error && connectionError(detail.error)}
+            {doc ? (
+              <Detail
+                key={`${id}/${doc.version}`}
+                doc={doc}
+                latest={Math.max(doc.version, ...doc.versions)}
+                version={version}
+                setVersion={setVersion}
+                upload={() => setModal("revision")}
+                refresh={refresh}
+              />
+            ) : !detail?.error ? (
+              <div className="empty">
+                <span className="empty-icon" aria-hidden="true">
+                  <WorkspaceIcon name="document" />
+                </span>
+                <h2>
+                  {id
+                    ? "Opening document"
+                    : !list?.data || list.error
+                      ? "Document library"
+                      : "Upload your first PDF"}
+                </h2>
+                <p>
+                  {id
+                    ? "Fetching the version and its evidence."
+                    : list?.error
+                      ? "Reconnect to load your documents."
+                      : !list?.data
+                        ? "Loading your workspace…"
+                        : "Add a document to start reviewing its extracted values and source passages."}
+                </p>
+                {docs?.length === 0 && !list?.error && (
+                  <button
+                    className="primary"
+                    onClick={() => setModal("upload")}
+                  >
+                    <WorkspaceIcon name="upload" />
+                    Choose PDFs
+                  </button>
+                )}
+                {list?.error && !docs && (
+                  <button onClick={refresh}>Retry loading documents</button>
+                )}
+              </div>
+            ) : null}
+          </section>
+        </div>
       </main>
       {(modal === "upload" || modal === "revision") && (
         <Upload

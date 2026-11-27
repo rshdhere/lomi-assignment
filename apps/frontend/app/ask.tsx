@@ -40,7 +40,7 @@ export function Ask({
   }
   return (
     <Modal title="Ask your documents" close={close}>
-      <form onSubmit={ask}>
+      <form onSubmit={ask} className="sheet-form" aria-busy={busy}>
         <label className="control">
           Search in
           <select
@@ -64,9 +64,14 @@ export function Ask({
             disabled={busy}
           />
         </label>
-        <button className="primary" disabled={busy || !question.trim()}>
-          {busy ? "Searching…" : "Ask question"}
-        </button>
+        <div className="sheet-actions">
+          <button className="primary" disabled={busy || !question.trim()}>
+            {busy ? "Searching…" : "Ask question"}
+            <span className="sheet-action-arrow" aria-hidden="true">
+              →
+            </span>
+          </button>
+        </div>
       </form>
       {error && (
         <p role="alert" className="error">
@@ -74,9 +79,9 @@ export function Ask({
         </p>
       )}
       {answer && (
-        <section aria-live="polite" className="answer">
+        <section aria-live="polite" className="query-answer">
           <h3>Answer</h3>
-          <p>
+          <p className="answer-text">
             {answer.sources.reduce(
               (text, source, i) =>
                 text.replaceAll(`[${source.id}]`, `[${i + 1}]`),
@@ -85,19 +90,30 @@ export function Ask({
           </p>
           {answer.sources.length > 0 && (
             <>
-              <h3>Sources</h3>
-              <ol>
-                {answer.sources.map((source) => (
+              <h3 className="sources-heading">Sources</h3>
+              <ol className="citation-list" role="list">
+                {answer.sources.map((source, i) => (
                   <li key={source.id}>
                     <button
-                      className="text-button"
+                      type="button"
+                      className="citation-link"
                       onClick={() => open(source.documentId, source.version)}
                     >
-                      {source.title} · v{source.version}
+                      <span aria-hidden="true" className="citation-number">
+                        [{i + 1}]
+                      </span>
+                      <span>
+                        {source.title} · v{source.version}
+                      </span>
+                      <span aria-hidden="true" className="citation-arrow">
+                        ↗
+                      </span>
                     </button>
-                    {source.value && <p>{source.value}</p>}
+                    {source.value && (
+                      <p className="citation-value">{source.value}</p>
+                    )}
                     {source.quote && <blockquote>{source.quote}</blockquote>}
-                    <small>
+                    <small className="citation-meta">
                       {source.field && fieldLabel(source.field) + " · "}
                       {source.reviewed ? "Reviewed" : "Unreviewed"}
                     </small>

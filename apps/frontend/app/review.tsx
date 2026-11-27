@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { ExtractedField, FieldReview } from "@repo/types/reviewer";
 import { errorMessage, fieldLabel, post } from "./client";
+import "./review.css";
 
 function reviewText(review: FieldReview | null) {
   if (!review) return "Pending";
@@ -43,12 +44,13 @@ export function ReviewField({
 
   const corrected = item.review?.action === "correct";
   return (
-    <article className="field">
+    <article className="field" aria-labelledby={`field-${item.id}`}>
       <div className="field-heading">
-        <h3>{fieldLabel(item.field)}</h3>
+        <h3 id={`field-${item.id}`}>{fieldLabel(item.field)}</h3>
         <span
           className={`review-state ${item.review ? "reviewed" : "pending"}`}
         >
+          <span className="review-indicator" aria-hidden="true" />
           {item.carriedOver && "Carried over · "}
           {reviewText(item.review)}
         </span>
@@ -69,14 +71,30 @@ export function ReviewField({
             <p className="review-note">Review note: {item.review.note}</p>
           )}
         </div>
-        <div className="source">
-          <p className="label">Source quote</p>
+        <figure className="source">
+          <figcaption className="label">
+            <svg
+              aria-hidden="true"
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+            >
+              <path
+                d="M2.5 8.5c0-2.2.8-3.7 2.8-4.8m-2.8 4.8h4.2v4H2.5v-4Zm7 0c0-2.2.8-3.7 2.8-4.8m-2.8 4.8h4.2v4H9.5v-4Z"
+                stroke="currentColor"
+                strokeWidth="1.35"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Source quote
+          </figcaption>
           {item.quote ? (
             <blockquote>{item.quote}</blockquote>
           ) : (
             <p className="muted">No verified passage.</p>
           )}
-        </div>
+        </figure>
       </div>
       {item.previous && !item.carriedOver && (
         <div className="previous">
@@ -97,7 +115,12 @@ export function ReviewField({
       {current && !editing && (
         <div className="field-actions">
           {(!item.review || corrected) && (
-            <button disabled={busy} onClick={() => void save("approve")}>
+            <button
+              className="approve-field"
+              disabled={busy}
+              onClick={() => void save("approve")}
+            >
+              <span className="action-check" aria-hidden="true" />
               {item.value === null ? "Confirm gap" : "Approve"}
             </button>
           )}

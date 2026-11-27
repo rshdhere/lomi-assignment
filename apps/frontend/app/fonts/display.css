@@ -1,0 +1,15 @@
+/* Fontshare's hosted face from https://api.fontshare.com/v2/css?f[]=sentient@300&display=swap */
+@font-face {
+  font-family: "Sentient";
+  src:
+    local("Sentient Light"),
+    url("https://cdn.fontshare.com/wf/43OAXICAEMXK2ZL74G7H76KFIYNEDOYN/35V5DYORRU36WSBMUAXF43PXJDG6AK72/M6X7C56BMVHUUEP2JAWS7SGZ7N6BGP7I.woff2")
+      format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-display: "Sentient", Georgia, "Times New Roman", serif;
+}
