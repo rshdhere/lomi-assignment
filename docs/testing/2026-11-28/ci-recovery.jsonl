@@ -1,0 +1,3 @@
+{"event":"stack-restarted","interruptedVersion":2,"interruptedStatus":"extracting","keysBeforeFlush":7,"keysAfterFlush":0,"services":["backend","frontend","model-double","postgres","redis","storage","worker"]}
+{"event":"recovery-verified","documentId":"6ff3b663-b1ef-4bdf-9c5d-ecfe558111cb","interruptedAt":"2026-11-27T21:10:14.579Z","recoveredAt":"2026-11-27T21:11:48.876Z","recoveryMs":94297,"restoredStatus":"extracted","preservedV1":{"pending":0,"approved":4,"corrected":1,"carriedOver":0},"uniqueV2Fields":5,"v2":{"pending":2,"approved":0,"corrected":0,"carriedOver":3}}
+{"event":"provider-retry-verified","documentId":"6e6469cb-581d-4ca5-90d5-1d504c60b066","fieldCount":5}

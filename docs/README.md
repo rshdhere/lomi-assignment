@@ -12,7 +12,7 @@ The disposable runner was an eight-vCPU, 64 GiB EC2 instance in Northern Virgini
 
 ## Hosted acceptance
 
-[Staging fixture results and production read-only checks](testing/2026-11-28/deployed-smoke.md)
+[Staging fixture results and production read-only checks](testing/2026-11-28/deployed-smoke.md) · [Hosted browser and recovery evidence](testing/2026-11-28/ci-acceptance.md)
 
 ## Application and operations
 

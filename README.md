@@ -65,6 +65,6 @@ For the next load test, the optional observability stack streams application met
 
 ![Grafana dashboard preview showing extraction backlog, latency by phase and Redis recovery during the benchmark](docs/testing/2026-11-27/grafana-dashboard.png)
 
-The classifier timings cover local regex performance. Live model timings, browser upload verification and a 10,000-document benchmark remain open. [Classifier measurements](packages/services/README.md) · [Fixture review screenshot](apps/frontend/evidence/revision-fixture.png)
+The classifier timings cover local regex performance. The hosted Chromium test verified upload, review, revision and history with the deterministic provider. Staging fixture checks exercised the real provider through the API. A browser walkthrough of the deployed candidate, live-provider capacity measurements and a 10,000-document benchmark remain open. [Browser and recovery evidence](docs/testing/2026-11-28/ci-acceptance.md) [Classifier measurements](packages/services/README.md) · [Fixture review screenshot](apps/frontend/evidence/revision-fixture.png)
 
 [Codex session transcript](https://gist.github.com/rshdhere/90a43fc37023e22aeb29ce1cff92f26a)
