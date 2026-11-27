@@ -8,4 +8,12 @@ We use the replay principle at document-version granularity. S3 retains original
 
 Reviews attach to extracted fields. The next version compares the same field’s validated quotes and copies an existing review only on exact equality. This survives changes in page offsets and intentionally sends changed punctuation, whitespace or model-selected quote boundaries back to the reviewer. Recent versions appear immediately in the dashboard. Historical values remain readable by version.
 
+## How retrieval fits the assignment
+
+The assignment calls for extracting every expected field from the text of the uploaded version. For example, checking the amount due on an invoice starts with the full parsed text. The parser returns a proposed value and quote. A missing field or a quote that fails the verbatim check becomes a gap with a reason. A reviewer can keep the source value and save a correction beside it. [Assignment](../../assignment.md)
+
+The extension gives the same version a second use. The parser also proposes section start lines. The worker slices the original text and computes chunk embeddings alongside section metadata. It commits the chunks, fields, carry-over decisions and visible outcome together. This keeps an extracted version searchable as soon as it appears in the UI. It also means an embedding-provider failure delays review until the extraction can be retried. [Extraction implementation](../../packages/services/src/extract.ts) · [RAG extension](../../SPEC.md)
+
+When a reviewer asks a question, the model must call the retrieval tool before answering. It chooses Postgres full-text search for exact terms or pgvector cosine search for semantic matches. The API combines retrieved passages with relevant reviewed fields from current extracted versions, optionally scoped to one document. An answer cites retrieved sources by version and exposes their review state. If the search finds no supporting source, the API tells the reviewer it could not establish an answer. [Query implementation](../../packages/services/src/query.ts)
+
 At larger volumes, measure the reconciliation query, queue wait, provider throttling and Postgres write latency separately. A queue backlog with idle model quota calls for additional bounded workers. Provider throttling calls for lower concurrency or coordinated backoff. Neither outcome requires duplicating the extraction path.

@@ -24,6 +24,8 @@ The disposable runner was an eight-vCPU, 64 GiB EC2 instance in Northern Virgini
 - [API contract](../packages/api/openapi.yaml)
 - [AWS infrastructure](../infra/README.md) and [staging and production CI/CD](../infra/github-actions.md)
 
+The editable architecture scene embeds the service logos for offline use and records each source on its image element. Artwork comes from the Logos collection and the Caddy, BullMQ, Loki and Jaeger projects. [Logos](https://github.com/gilbarbara/logos/tree/875d71c5a8e4aa90a33f8b3ea15b8945de9cc183/logos) · [Caddy](https://github.com/caddyserver/website/blob/fef9d0c271efaaac54f69be5e75a360701150ac0/src/old/resources/images/caddy-circle-lock.svg) · [BullMQ](https://github.com/taskforcesh/bullmq) · [Loki](https://github.com/grafana/loki/blob/3228586385e8646f0de396237aa9a9e63bceb491/docs/sources/logo.png) · [Jaeger](https://github.com/cncf/artwork/tree/9f45c2937e24a9f74cd8c609a45d492844fc5f10/projects/jaeger)
+
 ## Live load-test dashboard
 
 The isolated benchmark streams OpenTelemetry metrics, logs and traces. Grafana shows intake, worker backlog and request latency. Jaeger shows when each worker step ran for a given upload. [Start the telemetry stack](../infra/observability/README.md) · [Hosted Grafana and Jaeger captures](testing/2026-11-28/ci-acceptance.md#live-telemetry)

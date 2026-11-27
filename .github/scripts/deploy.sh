@@ -6,7 +6,8 @@ fail() { printf '%s\n' "$*" >&2; exit 1; }
 [[ $# == 1 && ($1 == staging || $1 == prod) ]] || fail 'Usage: deploy.sh staging|prod'
 stage=$1
 : "${RUNNER_TEMP:?}" "${DEPLOY_SHA:?}" "${DEFAULT_BRANCH:?}" "${DEPLOY_BRANCH:?}"
-: "${AWS_ACCOUNT_ID:?}" "${AWS_REGION:?}" "${TF_STATE_BUCKET:?}" "${DEPLOY_TFVARS_JSON:?}"
+: "${AWS_ACCOUNT_ID:?}" "${AWS_REGION:?}" "${TF_STATE_BUCKET:?}"
+[[ -n ${DEPLOY_TFVARS_JSON:-} ]] || fail "The $stage deployment received an empty DEPLOY_TFVARS_JSON. Check the environment secret and the calling workflow's secrets mapping."
 : "${GITHUB_REF:?}" "${GITHUB_SHA:?}" "${GITHUB_OUTPUT:?}"
 cd "$(git rev-parse --show-toplevel)"
 [[ $DEPLOY_BRANCH == "$DEFAULT_BRANCH" && $GITHUB_REF == "refs/heads/$DEFAULT_BRANCH" ]] ||
@@ -28,7 +29,9 @@ if ! jq -se --arg account "$AWS_ACCOUNT_ID" --arg region "$AWS_REGION" --arg sta
   --arg boundary "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/Lomi${stage^}WorkloadBoundary" '
   def host: type=="string" and length<254 and test("^([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?\\.)+[A-Za-z0-9-]+$");
   if length==1 and (.[0]|type=="object") then .[0] else error("expected one object") end |
-  select((keys - ["subnet_id","app_hostname","api_hostname","model_secret_arn","model_secret_kms_key_arn","ingress_cidrs","zone_id","workload_permissions_boundary_arn"]) == [])
+  select((has("account_id")|not) or .account_id==$account)
+  | select((has("region")|not) or .region==$region)
+  | select((keys - ["account_id","region","subnet_id","app_hostname","api_hostname","model_secret_arn","model_secret_kms_key_arn","ingress_cidrs","zone_id","workload_permissions_boundary_arn"]) == [])
   | select((.app_hostname|host) and (.api_hostname|host) and ((.app_hostname|ascii_downcase)!=(.api_hostname|ascii_downcase)))
   | select(.subnet_id|type=="string" and test("^subnet-([0-9a-f]{8}|[0-9a-f]{17})$"))
   | select(.model_secret_arn|type=="string" and test("^arn:aws:secretsmanager:"+$region+":"+$account+":secret:lomi/"+$stage+"/model-[A-Za-z0-9]{6}$"))

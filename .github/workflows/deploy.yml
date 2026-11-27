@@ -7,6 +7,10 @@ on:
         description: Destination fixed by the calling release workflow
         required: true
         type: string
+    secrets:
+      DEPLOY_TFVARS_JSON:
+        description: Terraform inputs for the selected GitHub environment
+        required: true
 
 permissions:
   contents: read
