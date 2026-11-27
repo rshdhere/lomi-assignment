@@ -1,0 +1,174 @@
+{
+  "startedAt": "2026-11-27T04:02:48.254Z",
+  "workerConcurrency": 2,
+  "modelDoubleDelayMs": 3000,
+  "commit": "5cb906e06ee9da2b193221c0995da08e47c352b9",
+  "image": "sha256:ede8981a01550fac67a07fca985eeaca9ccaa1ef321495af2e2c3680bf925861",
+  "sourceDigest": "b9c2b6f966a56e9dd2a6d918cb4af1197930593920b1e3a52777a03e193bacc9",
+  "cpu": "Intel(R) Xeon(R) Platinum 8488C",
+  "logicalCPUs": 8,
+  "platform": "linux",
+  "node": "v24.22.3",
+  "config": {
+    "readers": 4,
+    "readWindowMs": 8000,
+    "readPaceMs": 150,
+    "invoices": 8,
+    "uploadConcurrency": 4,
+    "pollMs": 500,
+    "drainLimitMs": 180000,
+    "burst": 32
+  },
+  "phases": {
+    "baseline": {
+      "elapsedMs": 8016,
+      "operations": {
+        "list": {
+          "statuses": {
+            "200": 104
+          },
+          "latencyMs": {
+            "n": 104,
+            "p50": 3.1,
+            "p95": 4,
+            "p99": 6.9,
+            "max": 13.1
+          }
+        },
+        "detail": {
+          "statuses": {
+            "200": 104
+          },
+          "latencyMs": {
+            "n": 104,
+            "p50": 4.1,
+            "p95": 5.8,
+            "p99": 14.3,
+            "max": 14.4
+          }
+        }
+      }
+    },
+    "extraction": {
+      "elapsedMs": 12683,
+      "operations": {
+        "upload": {
+          "statuses": {
+            "202": 8
+          },
+          "latencyMs": {
+            "n": 8,
+            "p50": 28.1,
+            "p95": 53.1,
+            "p99": 53.1,
+            "max": 53.1
+          }
+        },
+        "status": {
+          "statuses": {
+            "200": 136
+          },
+          "latencyMs": {
+            "n": 136,
+            "p50": 3.3,
+            "p95": 9.4,
+            "p99": 15.8,
+            "max": 15.9
+          }
+        }
+      }
+    },
+    "concurrentReads": {
+      "elapsedMs": 8006,
+      "operations": {
+        "list": {
+          "statuses": {
+            "200": 104
+          },
+          "latencyMs": {
+            "n": 104,
+            "p50": 2.8,
+            "p95": 3.7,
+            "p99": 24.6,
+            "max": 25.3
+          }
+        },
+        "detail": {
+          "statuses": {
+            "200": 104
+          },
+          "latencyMs": {
+            "n": 104,
+            "p50": 3.6,
+            "p95": 4.6,
+            "p99": 25.3,
+            "max": 42.3
+          }
+        }
+      }
+    },
+    "burst": {
+      "elapsedMs": 39,
+      "operations": {
+        "upload_manifest": {
+          "statuses": {
+            "201": 12,
+            "429": 20
+          },
+          "latencyMs": {
+            "n": 32,
+            "p50": 1.5,
+            "p95": 22.4,
+            "p99": 22.4,
+            "max": 22.4
+          }
+        }
+      }
+    }
+  },
+  "receipts": 8,
+  "outcomes": {
+    "extracted": 8
+  },
+  "uploadToExtractedMs": {
+    "n": 8,
+    "p50": 6639.5,
+    "p95": 12627.5,
+    "p99": 12627.5,
+    "max": 12627.5
+  },
+  "acceptanceToExtractedMs": {
+    "n": 8,
+    "p50": 6586.5,
+    "p95": 12600.7,
+    "p99": 12600.7,
+    "max": 12600.7
+  },
+  "observedBatchDocumentsPerSecond": 0.63,
+  "postgres": {
+    "documents": 8,
+    "attempts": 8,
+    "createdToFirstClaimMs": {
+      "n": 8,
+      "p50": 3439.9,
+      "p95": 9471.3,
+      "p99": 9471.3,
+      "max": 9471.3
+    },
+    "firstClaimToExtractedMs": {
+      "n": 8,
+      "p50": 3021.9,
+      "p95": 3025.6,
+      "p99": 3025.6,
+      "max": 3025.6
+    }
+  },
+  "retryAfterSeconds": {
+    "n": 20,
+    "p50": 48,
+    "p95": 48,
+    "p99": 48,
+    "max": 48
+  },
+  "failures": []
+}

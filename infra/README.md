@@ -2,6 +2,8 @@
 
 Staging and production are independent Terraform roots. **Apply staging alone to run one server.** Applying production as well runs a second server with its own data and billing.
 
+The disposable benchmark uses a separate [observability Compose stack](observability/README.md) for Grafana, OpenTelemetry, Prometheus, Loki and Jaeger. Enable it on the load-test host with the benchmark overlay.
+
 For a first deployment before committing to Git, follow the [manual staging walkthrough](first-staging-deploy.md) and its [exact staging IAM policy JSON and setup commands](bootstrap/staging-iam/README.md). After bootstrapping the account, you can publish images, apply Terraform and verify the host through separate GitHub Actions workflows for staging and production. [Configure CI/CD](github-actions.md)
 
 | Component        | Per deployed environment                                                                                                                                                                                                                                        |

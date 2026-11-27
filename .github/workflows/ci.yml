@@ -1,4 +1,4 @@
-name: CI
+name: lumi-labs
 
 # Staging deployment calls the same checks for every push to main.
 on:
@@ -20,7 +20,7 @@ env:
 
 jobs:
   application:
-    name: Application checks
+    name: application checks
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     services:
@@ -62,11 +62,11 @@ jobs:
       - run: pnpm build
 
   integration:
-    name: Recovery and browser tests
+    name: browser tests
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
-      # revision.mjs targets this exact project when testing a worker crash and Redis flush.
+      # revision.mjs targets this exact project when testing a worker crash and redis flush.
       COMPOSE_PROJECT_NAME: lomi-check
       COMPOSE_FILE: compose.yaml:tests/integration/compose.yaml
       COMPOSE_PROFILES: web-test
@@ -103,6 +103,8 @@ jobs:
             apps/frontend/evidence/report-gap.png
             apps/frontend/evidence/invoice-reviewed.png
             apps/frontend/evidence/invoice-revised.png
+            apps/frontend/.next/playwright-results/**/error-context.md
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
       - name: Show integration logs on failure
@@ -113,7 +115,7 @@ jobs:
         run: docker compose down --volumes --remove-orphans
 
   terraform:
-    name: Terraform checks
+    name: terraform checks
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -141,3 +143,6 @@ jobs:
           done
       - name: Plan deployment and document storage with mock providers
         run: terraform -chdir=infra/modules/aws test -parallelism=1
+
+  telemetry:
+    uses: ./.github/workflows/benchmark.yml

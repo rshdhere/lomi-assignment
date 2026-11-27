@@ -30,9 +30,10 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
 
   await page.getByRole("button", { name: "Upload PDFs", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog
-    .locator('input[type="file"]')
-    .setInputFiles(fixtures + "invoice-001.pdf");
+  const picker = dialog.locator('input[type="file"]');
+  // Each newly opened dialog fetches its upload limits before accepting files.
+  await expect(picker).toBeEnabled();
+  await picker.setInputFiles(fixtures + "invoice-001.pdf");
   await dialog.getByRole("combobox").selectOption("invoice");
   await dialog
     .getByRole("button", { name: "Upload PDFs", exact: true })
@@ -63,9 +64,8 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
     fullPage: true,
   });
   await page.getByRole("button", { name: "Upload revision" }).click();
-  await dialog
-    .locator('input[type="file"]')
-    .setInputFiles(fixtures + "invoice-001.v2.pdf");
+  await expect(picker).toBeEnabled();
+  await picker.setInputFiles(fixtures + "invoice-001.v2.pdf");
   await dialog
     .getByRole("button", { name: "Upload revision", exact: true })
     .click();

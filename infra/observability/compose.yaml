@@ -1,0 +1,68 @@
+# Compose resolves these bind mounts relative to the first file, compose.yaml.
+x-telemetry: &telemetry
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: otlp
+  OTEL_METRIC_EXPORT_INTERVAL: "5000"
+
+services:
+  backend:
+    environment:
+      <<: *telemetry
+      OTEL_SERVICE_NAME: lomi-api
+  worker:
+    environment:
+      <<: *telemetry
+      OTEL_SERVICE_NAME: lomi-worker
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.166.0@sha256:3e18fe04181de50bdd72e23ad4a4d6214b54351e63d496f1c58127cc4541ad7f
+    command: [--config=/etc/otelcol-contrib/lomi.yaml]
+    volumes:
+      - ./infra/observability/collector.yaml:/etc/otelcol-contrib/lomi.yaml:ro
+
+  prometheus:
+    image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+    volumes:
+      - ./infra/observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - bench-metrics:/prometheus
+
+  loki:
+    image: grafana/loki:3.7.11@sha256:4c86f2ad5003304c8da84d29da2279b04eb999d716f8089c88e4fa4a44b0781e
+    command: [-config.file=/etc/loki/lomi.yaml]
+    volumes:
+      - ./infra/observability/loki.yaml:/etc/loki/lomi.yaml:ro
+      - bench-logs:/loki
+
+  jaeger:
+    image: jaegertracing/jaeger:2.20.0@sha256:46a886260e04002d8f45e213fc39063fa11a50446048fdaa64786fc0840cb9f8
+    ports: ["127.0.0.1:16686:16686"]
+    environment:
+      JAEGER_LISTEN_HOST: 0.0.0.0
+    command:
+      [
+        --set=extensions.jaeger_storage.backends.some_storage.memory.max_traces=10000,
+      ]
+
+  grafana:
+    image: grafana/grafana:13.3.2@sha256:81556409ba48b2b922e0adb69a2511337d8ba7578f11962eefa6149a2d815101
+    ports: ["127.0.0.1:13000:3000"]
+    environment:
+      GF_SERVER_ROOT_URL: http://127.0.0.1:13000/
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_AUTH_BASIC_ENABLED: "false"
+      GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/lomi/dashboards/load.json
+    volumes:
+      - ./infra/observability/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/observability/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./infra/observability/dashboards:/etc/lomi/dashboards:ro
+
+volumes:
+  bench-metrics:
+  bench-logs:

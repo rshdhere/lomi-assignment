@@ -6,6 +6,7 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   workers: 1,
   use: {
+    actionTimeout: 20_000,
     baseURL: "http://localhost:3000",
     viewport: { width: 1360, height: 960 },
   },

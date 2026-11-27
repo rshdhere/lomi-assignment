@@ -1,3 +1,4 @@
+import { currentTraceparent } from "@repo/common/telemetry";
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { db } from "./client.ts";
@@ -83,9 +84,13 @@ export async function createBatch(
           sql`insert into documents(doc_id,title) values (${id},${item.title})`,
         );
       }
+      const traceparent = currentTraceparent();
+      const metadata = traceparent
+        ? { ...item.metadata, traceparent }
+        : item.metadata;
       await tx.execute(sql`insert into document_versions
         (doc_id,version,document_type,object_key,object_version,size_bytes,content_hash,metadata)
-        values (${id},${version},${type},${item.key},${item.objectVersion},${item.size},${item.contentHash},${JSON.stringify(item.metadata ?? {})}::jsonb)`);
+        values (${id},${version},${type},${item.key},${item.objectVersion},${item.size},${item.contentHash},${JSON.stringify(metadata ?? {})}::jsonb)`);
       receipts.push({ id, version, status: "queued" });
     }
     return receipts;
@@ -206,8 +211,10 @@ export async function retryDocument(id: string) {
       sql`select 1 from documents where doc_id=${id} for update`,
     );
     if (!doc.rowCount) throw new ApiError(404, "Document not found");
+    const traceparent = currentTraceparent();
     const changed =
-      await tx.execute(sql`update document_versions set status='queued', error=null, updated_at=now()
+      await tx.execute(sql`update document_versions set status='queued', error=null, updated_at=now(),
+        metadata=(metadata - 'traceparent') || ${JSON.stringify(traceparent ? { traceparent } : {})}::jsonb
       where doc_id=${id} and status='failed' and version=(select max(version) from document_versions where doc_id=${id})`);
     if (!changed.rowCount)
       throw new ApiError(409, "Only failed extractions can be retried");

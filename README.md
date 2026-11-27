@@ -2,7 +2,7 @@
 
 Upload a PDF, compare each extracted value with its exact source passage, and approve or correct it. When a revision arrives, the reviewer can see which evidence changed and open the earlier version.
 
-[Hosted demo browser walkthrough](docs/browser-walkthrough.md)
+[Hosted demo](https://lomi.raashed.com) · [Browser walkthrough](docs/browser-walkthrough.md) · [Staging acceptance results](docs/testing/2026-11-28/deployed-smoke.md)
 
 ## Run it
 
@@ -27,9 +27,15 @@ S3 keeps the PDF bytes. Postgres records a logical document, immutable numbered 
 
 The API commits queued work in Postgres before responding. The worker offers outstanding versions to BullMQ, obtains a time-limited Postgres claim, reads the pinned PDF and calls the type-specific parser. The model proposes section boundaries in the original text. The worker embeds those sections and enriches their metadata. Values, chunks, carried reviews and the extracted state commit in one transaction. A stale claim cannot overwrite a newer attempt. A worker restart or Redis flush can cause another provider call. The version and field identities keep the persisted result unique.
 
-A field carries its prior review when its validated quote is byte-for-byte equal in both parsed versions. Moving the quote does not change its identity. If the model selects a different span, the field conservatively returns to pending. Earlier version reviews become read-only when a revision is accepted. Six-second polling keeps the document and its progress current. [Design decision](docs/adr/0001-versioned-extraction.md) · [Editable diagram](docs/architecure.excalidraw)
+A field carries its prior review when its validated quote is byte-for-byte equal in both parsed versions. Moving the quote does not change its identity. If the model selects a different span, the field conservatively returns to pending. Earlier version reviews become read-only when a revision is accepted. Six-second polling keeps the document and its progress current. [Design decision](docs/adr/0001-versioned-extraction.md)
 
-![Upload, extraction, review and retrieval architecture](docs/architecure.png)
+## Architecture after the first load test
+
+At peak, the benchmark accepted 44 PDFs per minute and completed 39.7 per minute. The V2 diagram shows where that difference accumulates and how to investigate it. Follow the numbered upload path to the worker, then follow the trace through PDF reading, parsing, model extraction and the final Postgres commit. [First load-test measurements](docs/testing/2026-11-27/load.md)
+
+![Lomi V2 architecture showing the deployed review workflow, Redis recovery and the isolated observable benchmark](docs/architecture-v2.png)
+
+To edit the diagram, download the scene and open it with **Excalidraw → Open**. [V2 Excalidraw source](docs/architecture-v2.excalidraw) · [Original architecture](docs/architecure.png)
 
 ## Code and verification
 
@@ -53,6 +59,14 @@ GitHub Actions runs application, browser, recovery and Terraform checks on pull 
 
 This is a single-reviewer local stack with loopback ports. It supports text PDFs and a bounded model context. OCR, reviewer identity and tenant isolation are outside this implementation. Configure authentication, retention of uploaded objects and access controls for prompts and raw responses before exposing client documents. The AWS Terraform module provisions private storage with public access blocked, HTTPS enforcement, restricted signing permissions and a version-read-only worker role.
 
-At 10,000 documents the unpaginated library and periodic progress queries deserve measurement first. Compare list latency, submission latency, time waiting for a claim, provider latency and end-to-end completion under sustained load. Use those results to size workers, introduce pagination or change the reconciliation query. The classifier timing in this checkout covers local regex performance. The [captured fixture review](apps/frontend/evidence/revision-fixture.png) shows two pending fields after a model-double extraction and database-backed carry-over. Live model timings, the full Compose restart/flush run, the browser upload test and sustained load measurements are pending.
+On the disposable EC2 test stack, an invoice revision recovered 93.160 seconds after the worker was killed, Redis was emptied and the running services were restarted. The four approvals and one correction on v1 survived. Three reviews carried over to v2 and two fields returned to pending. [Recovery screenshot and recorded events](tests/integration/README.md)
+
+The one-hour API load test on an 8-vCPU `r7i.2xlarge` completed 1,118 invoice uploads with verified evidence and a saved vendor review on each. With a deterministic three-second model and two extraction slots, the peak phase sustained 60 library and detail reads per second. Peak p95 list latency was 49.4 ms, while peak p95 upload-to-extraction time reached 134.3 s. Up to 93 invoices waited or were extracting at once. The backlog cleared during cooldown. [Load results and screenshots](tests/bench/README.md)
+
+The Grafana capture below comes from a subsequent eight-invoice baseline with two worker slots. The queue grew to eight and drained. Select a trace to see when the API accepted an invoice and when the worker began processing it. [Live benchmark instructions](infra/observability/README.md) · [Jaeger trace and hosted evidence](docs/testing/2026-11-28/ci-acceptance.md#live-telemetry)
+
+![Grafana showing the eight-invoice queue drain, API latency by route, extraction duration, application logs and recent traces](docs/testing/2026-11-28/live-grafana.png)
+
+The classifier timings cover local regex performance. The hosted Chromium test verified upload, review, revision and history with the deterministic provider. Staging fixture checks exercised the real provider through the API. A browser walkthrough of the deployed candidate, live-provider capacity measurements and a 10,000-document benchmark remain open. [Browser and recovery evidence](docs/testing/2026-11-28/ci-acceptance.md) [Classifier measurements](packages/services/README.md) · [Fixture review screenshot](apps/frontend/evidence/revision-fixture.png)
 
 [Codex session transcript](https://gist.github.com/rshdhere/90a43fc37023e22aeb29ce1cff92f26a)

@@ -29,6 +29,19 @@ for service in backend frontend worker postgres redis proxy; do
   [[ $(docker inspect -f '{{.Config.Image}}' "$id") == "$expected" ]] || fail "$service runs an unexpected image digest."
 done
 
+# Report durable work even if Redis was just emptied. A transient backlog on
+# a running release is expected; the operator compares successive samples.
+# shellcheck disable=SC2016 # The container supplies the database user and name.
+compose exec -T postgres sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT now() AS sampled_at,
+       count(*) FILTER (WHERE status = 'queued') AS queued,
+       max(now() - updated_at) FILTER (WHERE status = 'queued') AS oldest_queued_age,
+       count(*) FILTER (WHERE status = 'extracting') AS extracting,
+       count(*) FILTER (WHERE status = 'extracting' AND lease_until < now()) AS expired_claims,
+       count(*) FILTER (WHERE status = 'failed') AS failed_versions
+FROM document_versions;
+SQL
+
 # Reach the real backends behind Caddy without editing its reviewer allowlist.
 compose exec -T frontend node --input-type=module - <<'JS'
 const response = await fetch("http://127.0.0.1:3000/", {signal:AbortSignal.timeout(8000)});

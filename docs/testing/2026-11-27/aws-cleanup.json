@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-11-27T05:15:06+00:00",
+  "region": "us-east-1",
+  "queried": {
+    "volume": "vol-07cd7d6d632c65ca5",
+    "group": "sg-0caf4315baf55a88a",
+    "key": "key-0a1981e1a0e7c8650"
+  },
+  "instance": {
+    "id": "i-0e7bc6663e9cc6f72",
+    "state": "terminated",
+    "launchedAt": "2026-11-27T03:23:35+00:00",
+    "transition": "User initiated (2026-11-27 05:05:22 GMT)"
+  },
+  "remainingVolumes": [],
+  "remainingGroups": [],
+  "remainingKeys": [],
+  "launchToShutdownRequestSeconds": 6107.0,
+  "passed": true
+}

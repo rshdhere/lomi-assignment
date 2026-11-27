@@ -24,11 +24,28 @@ export type Claim = {
   token: string;
 };
 
+/** Durable backlog, including work not currently present in Redis. */
+export async function getExtractionQueueSnapshot() {
+  const { rows } = await db.execute<{
+    queued: number;
+    extracting: number;
+    expiredClaims: number;
+    oldestQueuedSeconds: number;
+  }>(sql`select
+    (count(*) filter (where status='queued'))::int as queued,
+    (count(*) filter (where status='extracting'))::int as extracting,
+    (count(*) filter (where status='extracting' and lease_until<now()))::int as "expiredClaims",
+    coalesce(extract(epoch from now() - min(updated_at) filter (where status='queued')), 0)::float8 as "oldestQueuedSeconds"
+    from document_versions where status in ('queued','extracting')`);
+  return rows[0]!;
+}
+
 export async function scheduledVersions() {
   return (
     await db.execute<{
       id: string;
-    }>(sql`select version_id as id from document_versions
+      traceparent: string | null;
+    }>(sql`select version_id as id, metadata->>'traceparent' as traceparent from document_versions
     where status='queued' or (status='extracting' and lease_until<now()) order by updated_at limit 100`)
   ).rows;
 }
@@ -93,7 +110,7 @@ export async function finishClaim(
     const own =
       await tx.execute(sql`select 1 from document_versions where version_id=${claim.versionId}
       and claim_token=${claim.token} for update`);
-    if (!own.rowCount) return;
+    if (!own.rowCount) return false;
     const previous = await tx.execute<{
       id: string;
       field: string;
@@ -131,6 +148,7 @@ export async function finishClaim(
     await tx.execute(sql`update document_versions set parsed_text=${text}, document_type=${type},
       metadata=metadata || ${JSON.stringify(metadata)}::jsonb,status='extracted',error=null,claim_token=null,lease_until=null,updated_at=now()
       where version_id=${claim.versionId}`);
+    return true;
   });
 }
 export type SearchHit = {
@@ -175,9 +193,16 @@ export async function reviewedSources(
   query: string,
   chunkIds: string[],
   documentId?: string,
+  question?: string,
 ): Promise<Source[]> {
   const terms = sql`websearch_to_tsquery('english',${query})`;
   const reviewedText = sql`to_tsvector('english',replace(e.field,'_',' ') || ' ' || coalesce(r.correction,e.value,'') || ' ' || coalesce(e.quote,''))`;
+  // A tool's lexical rewrite may include words like "corrected" that never
+  // appear in the PDF. Within one document the question can name a field directly.
+  const namedField =
+    documentId && question
+      ? sql`to_tsvector('english',${question}) @@ phraseto_tsquery('english',replace(e.field,'_',' '))`
+      : sql`false`;
   return (
     await db.execute<Source>(sql`select e.value_id as id,d.doc_id as "documentId",d.title,v.version,
     coalesce(e.quote,'') as quote,e.field,coalesce(r.correction,e.value) as value,true as reviewed
@@ -186,9 +211,9 @@ export async function reviewedSources(
     where v.status='extracted' and coalesce(r.correction,e.value) is not null
     and v.version=(select max(version) from document_versions newer where newer.doc_id=v.doc_id)
     ${documentId ? sql`and d.doc_id=${documentId}` : sql``}
-    and (${reviewedText} @@ ${terms} or exists(select 1 from chunks c where
+    and (${namedField} or ${reviewedText} @@ ${terms} or exists(select 1 from chunks c where
       c.chunk_id in (select jsonb_array_elements_text(${JSON.stringify(chunkIds)}::jsonb)::uuid)
       and c.version_id=v.version_id and strpos(c.text,e.quote)>0))
-    order by ts_rank(${reviewedText},${terms}) desc,e.field limit 20`)
+    order by ${documentId && question ? sql`(${namedField}) desc,` : sql``}ts_rank(${reviewedText},${terms}) desc,e.field limit 20`)
   ).rows;
 }
