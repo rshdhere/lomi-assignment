@@ -88,8 +88,8 @@ jobs:
         run: |
           docker compose build --build-arg NEXT_PUBLIC_API_ORIGIN=http://localhost:14000 init frontend
           docker compose up --no-build --detach
-          curl --retry 60 --retry-connrefused --retry-delay 2 --fail --silent --show-error http://localhost:14000/health
-          curl --retry 60 --retry-connrefused --retry-delay 2 --fail --silent --show-error --output /dev/null http://localhost:3000
+          curl --retry 60 --retry-all-errors --max-time 5 --retry-delay 2 --fail --silent --show-error http://localhost:14000/health
+          curl --retry 60 --retry-all-errors --max-time 5 --retry-delay 2 --fail --silent --show-error --output /dev/null http://localhost:3000
       - name: Exercise interrupted extraction, review carry-over and batch replay
         run: node tests/integration/revision.mjs --recovery
       - name: Review and revise a PDF in Chromium
