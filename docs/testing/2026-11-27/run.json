@@ -1,0 +1,788 @@
+{
+  "environment": {
+    "instanceType": "r7i.2xlarge",
+    "region": "us-east-1",
+    "model": "deterministic integration double",
+    "projects": ["lomi-check", "lomi-bench"],
+    "cpu": "Intel(R) Xeon(R) Platinum 8488C",
+    "node": "v24.22.3",
+    "availableCPUs": 8,
+    "workerConcurrency": 2,
+    "fixtureExtractionDelayMs": 3000
+  },
+  "source": {
+    "checkedOutCommit": "5cb906e06ee9da2b193221c0995da08e47c352b9",
+    "baselineCommit": "5cb906e06ee9da2b193221c0995da08e47c352b9",
+    "soakCommit": "5cb906e06ee9da2b193221c0995da08e47c352b9",
+    "testedFilesSHA256": {
+      "compose.yaml": "af514d2a518b31cc0452dd0371d964a7ab7619c275031a79ec4268c7075b3231",
+      "docker/Dockerfile": "4d6b78b0eb43c33e6e03263a2d676103f4b6e157843a6def428dfb51be506881",
+      "tests/bench/load.mjs": "785a61797a62b5d4770e7f282f65517660193ba338fb3537403956c4b15e97c1",
+      "tests/bench/soak.mjs": "92b05b16b12bbe23627a82754179162b5d75e1ef76e50cc3e3c0d988d8c7e42e",
+      "tests/integration/compose.yaml": "db7e837604941f559760fc13860d80ab6a5cd353374c9e0f474d6557d66cb06f",
+      "tests/integration/provider.mjs": "59e2d6dbd1bdafbf77b0629bfa1f386ee83f377ec9a1cc79a72a359e3fc74455",
+      "tests/integration/revision.mjs": "b3b8208bb0eb74902f8bd7cffb98d311face27f928e49cd2b3f89ba47ae63c68"
+    },
+    "guestSourceManifestSHA256": "e61be54e476bbd5283a226deb2bd86be3db3d23cac7698cc0bda95a0526fbae5",
+    "baselineApplicationSourcesDigest": "b9c2b6f966a56e9dd2a6d918cb4af1197930593920b1e3a52777a03e193bacc9",
+    "baselineImage": "sha256:ede8981a01550fac67a07fca985eeaca9ccaa1ef321495af2e2c3680bf925861",
+    "soakImage": "sha256:ede8981a01550fac67a07fca985eeaca9ccaa1ef321495af2e2c3680bf925861",
+    "soakHarnessSHA256": "92b05b16b12bbe23627a82754179162b5d75e1ef76e50cc3e3c0d988d8c7e42e",
+    "uncommittedOverlay": true,
+    "status": "PASS",
+    "checks": {
+      "guest_source_check_passed": true,
+      "source_manifests_cover_harnesses": true,
+      "same_commit_across_evidence": true,
+      "same_image_in_baseline_and_soak": true,
+      "soak_harness_matches_guest_manifest": true
+    }
+  },
+  "baseline": {
+    "status": "PASS",
+    "checks": {
+      "all_requested_uploads_accepted": true,
+      "all_receipts_extracted": true,
+      "timed_all_completions_in_postgres": true,
+      "validated_quota_retry": true,
+      "harness_recorded_no_failures": true
+    }
+  },
+  "soak": {
+    "status": "PASS",
+    "checks": {
+      "completed_full_hour": true,
+      "successful_http_burst_throttling": true,
+      "all_accepted_documents_extracted": true,
+      "all_accepted_evidence_checked_and_reviewed": true,
+      "remaining_extraction_backlog_empty": true,
+      "all_signed_batches_completed": true,
+      "no_harness_errors": true,
+      "harness_verdict": true
+    },
+    "observedExtractedDocumentsPerSecondOverWindow": 0.311,
+    "phaseSummary": {
+      "warm": {
+        "completePhase": true,
+        "target": {
+          "name": "warm",
+          "minutes": 10,
+          "readsPerSecond": 4,
+          "flowsPerMinute": 2
+        },
+        "observedSeconds": 600,
+        "httpStatusCounts": {
+          "200": 2610,
+          "202": 20,
+          "201": 5,
+          "204": 10
+        },
+        "http429": 0,
+        "successfulListAndDetailRequests": 2400,
+        "successfulListAndDetailPerSecond": 4.0,
+        "documentsAcceptedInPhase": 25,
+        "observedExtractedInPhase": 25,
+        "observedExtractedPerSecond": 0.042,
+        "skippedSchedules": {
+          "read": 0
+        },
+        "observedCompletionMs": {
+          "n": 25,
+          "p50": 6021.6,
+          "p95": 6772,
+          "p99": 6772,
+          "max": 6772
+        },
+        "maxQueued": 2,
+        "maxActive": 2,
+        "redisMaxWaiting": 0,
+        "redisMaxActive": 1,
+        "cumulativeOutcomesAtPhaseEndOrLastSample": {
+          "queued": 0,
+          "extracting": 0,
+          "extracted": 25,
+          "failed": 0,
+          "evidenceChecked": 25,
+          "reviewed": 25,
+          "receipts": 25,
+          "pendingBatches": 0
+        },
+        "httpOperations": {
+          "pollLibrary": {
+            "responses": 120,
+            "statusCounts": {
+              "200": 120
+            }
+          },
+          "list": {
+            "responses": 1200,
+            "statusCounts": {
+              "200": 1200
+            }
+          },
+          "multipartUpload": {
+            "responses": 15,
+            "statusCounts": {
+              "202": 15
+            }
+          },
+          "seedDetail": {
+            "responses": 1200,
+            "statusCounts": {
+              "200": 1200
+            }
+          },
+          "verifyInvoice": {
+            "responses": 25,
+            "statusCounts": {
+              "200": 25
+            }
+          },
+          "reviewVendor": {
+            "responses": 25,
+            "statusCounts": {
+              "200": 25
+            }
+          },
+          "lexicalQuery": {
+            "responses": 20,
+            "statusCounts": {
+              "200": 20
+            }
+          },
+          "semanticQuery": {
+            "responses": 20,
+            "statusCounts": {
+              "200": 20
+            }
+          },
+          "createBatch": {
+            "responses": 5,
+            "statusCounts": {
+              "201": 5
+            }
+          },
+          "storageUpload": {
+            "responses": 10,
+            "statusCounts": {
+              "204": 10
+            }
+          },
+          "completeBatch": {
+            "responses": 5,
+            "statusCounts": {
+              "202": 5
+            }
+          }
+        }
+      },
+      "steady": {
+        "completePhase": true,
+        "target": {
+          "name": "steady",
+          "minutes": 15,
+          "readsPerSecond": 20,
+          "flowsPerMinute": 8
+        },
+        "observedSeconds": 900,
+        "httpStatusCounts": {
+          "200": 18534,
+          "202": 120,
+          "201": 30,
+          "204": 60
+        },
+        "http429": 0,
+        "successfulListAndDetailRequests": 17999,
+        "successfulListAndDetailPerSecond": 19.999,
+        "documentsAcceptedInPhase": 150,
+        "observedExtractedInPhase": 148,
+        "observedExtractedPerSecond": 0.164,
+        "skippedSchedules": {
+          "read": 0
+        },
+        "observedCompletionMs": {
+          "n": 150,
+          "p50": 4625.4,
+          "p95": 9637.8,
+          "p99": 9645.7,
+          "max": 9645.7
+        },
+        "maxQueued": 0,
+        "maxActive": 2,
+        "redisMaxWaiting": 0,
+        "redisMaxActive": 0,
+        "cumulativeOutcomesAtPhaseEndOrLastSample": {
+          "queued": 2,
+          "extracting": 0,
+          "extracted": 173,
+          "failed": 0,
+          "evidenceChecked": 173,
+          "reviewed": 173,
+          "receipts": 175,
+          "pendingBatches": 0
+        },
+        "httpOperations": {
+          "list": {
+            "responses": 9000,
+            "statusCounts": {
+              "200": 9000
+            }
+          },
+          "multipartUpload": {
+            "responses": 90,
+            "statusCounts": {
+              "202": 90
+            }
+          },
+          "lexicalQuery": {
+            "responses": 30,
+            "statusCounts": {
+              "200": 30
+            }
+          },
+          "seedDetail": {
+            "responses": 8999,
+            "statusCounts": {
+              "200": 8999
+            }
+          },
+          "pollLibrary": {
+            "responses": 179,
+            "statusCounts": {
+              "200": 179
+            }
+          },
+          "verifyInvoice": {
+            "responses": 148,
+            "statusCounts": {
+              "200": 148
+            }
+          },
+          "reviewVendor": {
+            "responses": 148,
+            "statusCounts": {
+              "200": 148
+            }
+          },
+          "semanticQuery": {
+            "responses": 30,
+            "statusCounts": {
+              "200": 30
+            }
+          },
+          "createBatch": {
+            "responses": 30,
+            "statusCounts": {
+              "201": 30
+            }
+          },
+          "storageUpload": {
+            "responses": 60,
+            "statusCounts": {
+              "204": 60
+            }
+          },
+          "completeBatch": {
+            "responses": 30,
+            "statusCounts": {
+              "202": 30
+            }
+          }
+        }
+      },
+      "peak": {
+        "completePhase": true,
+        "target": {
+          "name": "peak",
+          "minutes": 20,
+          "readsPerSecond": 60,
+          "flowsPerMinute": 16
+        },
+        "observedSeconds": 1200,
+        "httpStatusCounts": {
+          "200": 73908,
+          "202": 327,
+          "429": 24,
+          "201": 79,
+          "204": 632
+        },
+        "http429": 24,
+        "successfulListAndDetailRequests": 72000,
+        "successfulListAndDetailPerSecond": 60.0,
+        "documentsAcceptedInPhase": 880,
+        "observedExtractedInPhase": 794,
+        "observedExtractedPerSecond": 0.662,
+        "skippedSchedules": {
+          "read": 0
+        },
+        "observedCompletionMs": {
+          "n": 880,
+          "p50": 76503,
+          "p95": 134250.1,
+          "p99": 140520.4,
+          "max": 144282.8
+        },
+        "maxQueued": 91,
+        "maxActive": 2,
+        "redisMaxWaiting": 82,
+        "redisMaxActive": 2,
+        "cumulativeOutcomesAtPhaseEndOrLastSample": {
+          "queued": 86,
+          "extracting": 2,
+          "extracted": 967,
+          "failed": 0,
+          "evidenceChecked": 967,
+          "reviewed": 967,
+          "receipts": 1055,
+          "pendingBatches": 0
+        },
+        "httpOperations": {
+          "pollLibrary": {
+            "responses": 240,
+            "statusCounts": {
+              "200": 240
+            }
+          },
+          "seedDetail": {
+            "responses": 36000,
+            "statusCounts": {
+              "200": 36000
+            }
+          },
+          "multipartUpload": {
+            "responses": 240,
+            "statusCounts": {
+              "202": 238,
+              "429": 2
+            }
+          },
+          "lexicalQuery": {
+            "responses": 40,
+            "statusCounts": {
+              "200": 40
+            }
+          },
+          "burstUpload": {
+            "responses": 32,
+            "statusCounts": {
+              "202": 10,
+              "429": 22
+            }
+          },
+          "verifyInvoice": {
+            "responses": 794,
+            "statusCounts": {
+              "200": 794
+            }
+          },
+          "reviewVendor": {
+            "responses": 794,
+            "statusCounts": {
+              "200": 794
+            }
+          },
+          "list": {
+            "responses": 36000,
+            "statusCounts": {
+              "200": 36000
+            }
+          },
+          "createBatch": {
+            "responses": 79,
+            "statusCounts": {
+              "201": 79
+            }
+          },
+          "storageUpload": {
+            "responses": 632,
+            "statusCounts": {
+              "204": 632
+            }
+          },
+          "completeBatch": {
+            "responses": 79,
+            "statusCounts": {
+              "202": 79
+            }
+          },
+          "semanticQuery": {
+            "responses": 40,
+            "statusCounts": {
+              "200": 40
+            }
+          }
+        }
+      },
+      "cooldown": {
+        "completePhase": true,
+        "target": {
+          "name": "cooldown",
+          "minutes": 10,
+          "readsPerSecond": 12,
+          "flowsPerMinute": 5
+        },
+        "observedSeconds": 600,
+        "httpStatusCounts": {
+          "200": 7660,
+          "201": 13,
+          "204": 26,
+          "202": 50
+        },
+        "http429": 0,
+        "successfulListAndDetailRequests": 7199,
+        "successfulListAndDetailPerSecond": 11.998,
+        "documentsAcceptedInPhase": 63,
+        "observedExtractedInPhase": 151,
+        "observedExtractedPerSecond": 0.252,
+        "skippedSchedules": {
+          "read": 0
+        },
+        "observedCompletionMs": {
+          "n": 63,
+          "p50": 6944.9,
+          "p95": 115313,
+          "p99": 134335.3,
+          "max": 134335.3
+        },
+        "maxQueued": 86,
+        "maxActive": 2,
+        "redisMaxWaiting": 86,
+        "redisMaxActive": 2,
+        "cumulativeOutcomesAtPhaseEndOrLastSample": {
+          "queued": 0,
+          "extracting": 0,
+          "extracted": 1118,
+          "failed": 0,
+          "evidenceChecked": 1118,
+          "reviewed": 1118,
+          "receipts": 1118,
+          "pendingBatches": 0
+        },
+        "httpOperations": {
+          "seedDetail": {
+            "responses": 3600,
+            "statusCounts": {
+              "200": 3600
+            }
+          },
+          "createBatch": {
+            "responses": 13,
+            "statusCounts": {
+              "201": 13
+            }
+          },
+          "lexicalQuery": {
+            "responses": 20,
+            "statusCounts": {
+              "200": 20
+            }
+          },
+          "storageUpload": {
+            "responses": 26,
+            "statusCounts": {
+              "204": 26
+            }
+          },
+          "list": {
+            "responses": 3599,
+            "statusCounts": {
+              "200": 3599
+            }
+          },
+          "completeBatch": {
+            "responses": 13,
+            "statusCounts": {
+              "202": 13
+            }
+          },
+          "pollLibrary": {
+            "responses": 119,
+            "statusCounts": {
+              "200": 119
+            }
+          },
+          "verifyInvoice": {
+            "responses": 151,
+            "statusCounts": {
+              "200": 151
+            }
+          },
+          "reviewVendor": {
+            "responses": 151,
+            "statusCounts": {
+              "200": 151
+            }
+          },
+          "multipartUpload": {
+            "responses": 37,
+            "statusCounts": {
+              "202": 37
+            }
+          },
+          "semanticQuery": {
+            "responses": 20,
+            "statusCounts": {
+              "200": 20
+            }
+          }
+        }
+      },
+      "drain": {
+        "completePhase": true,
+        "target": {
+          "name": "drain",
+          "minutes": 5,
+          "readsPerSecond": 0,
+          "flowsPerMinute": 0
+        },
+        "observedSeconds": 300.0,
+        "httpStatusCounts": {
+          "200": 58
+        },
+        "http429": 0,
+        "successfulListAndDetailRequests": 0,
+        "successfulListAndDetailPerSecond": 0.0,
+        "documentsAcceptedInPhase": 0,
+        "observedExtractedInPhase": 0,
+        "observedExtractedPerSecond": 0.0,
+        "skippedSchedules": {},
+        "observedCompletionMs": {
+          "n": 0,
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "max": null
+        },
+        "maxQueued": 0,
+        "maxActive": 0,
+        "redisMaxWaiting": 0,
+        "redisMaxActive": 0,
+        "cumulativeOutcomesAtPhaseEndOrLastSample": {
+          "queued": 0,
+          "extracting": 0,
+          "extracted": 1118,
+          "failed": 0,
+          "evidenceChecked": 1118,
+          "reviewed": 1118,
+          "receipts": 1118,
+          "pendingBatches": 0
+        },
+        "httpOperations": {
+          "pollLibrary": {
+            "responses": 58,
+            "statusCounts": {
+              "200": 58
+            }
+          }
+        }
+      }
+    },
+    "phaseReadLatencyMs": {
+      "warm": {
+        "list": {
+          "n": 1200,
+          "p50": 3.5,
+          "p95": 4,
+          "p99": 4.5,
+          "max": 15.9
+        },
+        "seedDetail": {
+          "n": 1200,
+          "p50": 4,
+          "p95": 4.4,
+          "p99": 4.8,
+          "max": 12.2
+        }
+      },
+      "steady": {
+        "list": {
+          "n": 9000,
+          "p50": 4.4,
+          "p95": 6.3,
+          "p99": 6.7,
+          "max": 10.4
+        },
+        "seedDetail": {
+          "n": 8999,
+          "p50": 3.1,
+          "p95": 3.8,
+          "p99": 4.1,
+          "max": 7.2
+        }
+      },
+      "peak": {
+        "list": {
+          "n": 36000,
+          "p50": 21.1,
+          "p95": 49.4,
+          "p99": 57.3,
+          "max": 88.1
+        },
+        "seedDetail": {
+          "n": 36000,
+          "p50": 2.8,
+          "p95": 3.7,
+          "p99": 7.9,
+          "max": 64.1
+        }
+      },
+      "cooldown": {
+        "list": {
+          "n": 3599,
+          "p50": 19.4,
+          "p95": 20.6,
+          "p99": 24.8,
+          "max": 34.8
+        },
+        "seedDetail": {
+          "n": 3600,
+          "p50": 3.3,
+          "p95": 3.8,
+          "p99": 4.1,
+          "max": 16.6
+        }
+      },
+      "drain": {}
+    },
+    "event": "soak-result",
+    "at": "2026-11-27T05:04:10.335Z",
+    "runId": "1170ab7e-2c80-40ab-abc6-b0c83624c72c",
+    "startedAt": "2026-11-27T04:04:10.306Z",
+    "requestedSeconds": 3600,
+    "windowElapsedMs": 3600000,
+    "fullHour": true,
+    "peakInflight": 16,
+    "maxPending": 93,
+    "remainingBacklog": 0,
+    "outcomes": {
+      "queued": 0,
+      "extracting": 0,
+      "extracted": 1118,
+      "failed": 0,
+      "evidenceChecked": 1118,
+      "reviewed": 1118,
+      "receipts": 1118,
+      "pendingBatches": 0
+    },
+    "rateLimitedResponses": 24,
+    "burstThrottles": 22,
+    "retryAfterSeconds": {
+      "n": 24,
+      "p50": 11,
+      "p95": 11,
+      "p99": 11,
+      "max": 11
+    },
+    "errorCount": 0,
+    "errorExamples": [],
+    "pass": true
+  },
+  "resources": {
+    "host": {
+      "entireGuestRun": {
+        "samples": 65,
+        "min_available_memory_KiB": 61881756.0,
+        "min_free_swap_KiB": 0.0,
+        "min_free_disk_KiB": 97866496.0,
+        "max_load1": 1.71,
+        "max_load5": 1.27,
+        "max_load15": 0.77
+      },
+      "duringSoak": {
+        "samples": 60,
+        "min_available_memory_KiB": 62041800.0,
+        "min_free_swap_KiB": 0.0,
+        "min_free_disk_KiB": 97866496.0,
+        "max_load1": 1.71,
+        "max_load5": 1.27,
+        "max_load15": 0.77
+      }
+    },
+    "containersDuringSoak": {
+      "lomi-bench-backend-1": {
+        "samples": 60,
+        "maxCPUPercent": 19.0,
+        "maxMemoryBytes": 352426394
+      },
+      "lomi-bench-worker-1": {
+        "samples": 60,
+        "maxCPUPercent": 7.27,
+        "maxMemoryBytes": 303248179
+      },
+      "lomi-bench-redis-1": {
+        "samples": 60,
+        "maxCPUPercent": 2.48,
+        "maxMemoryBytes": 6688866
+      },
+      "lomi-bench-postgres-1": {
+        "samples": 60,
+        "maxCPUPercent": 145.36,
+        "maxMemoryBytes": 81830871
+      },
+      "lomi-bench-storage-1": {
+        "samples": 60,
+        "maxCPUPercent": 3.49,
+        "maxMemoryBytes": 347183514
+      },
+      "lomi-bench-model-double-1": {
+        "samples": 60,
+        "maxCPUPercent": 0.15,
+        "maxMemoryBytes": 27965522
+      }
+    }
+  },
+  "runner": {
+    "stages": {
+      "baseline": 0,
+      "bench-diagnostics": 0,
+      "bench-down": 0,
+      "bench-up": 0,
+      "build": 0,
+      "node": 0,
+      "preflight": 0,
+      "recovery-diagnostics": 0,
+      "recovery-down": 0,
+      "recovery-up": 0,
+      "recovery": 0,
+      "soak": 0,
+      "source": 0
+    },
+    "finished": {
+      "finishedAt": "2026-11-27T05:04:41Z",
+      "exitCode": 0,
+      "isolatedProjects": ["lomi-check", "lomi-bench"]
+    }
+  },
+  "parseWarnings": [],
+  "method": [
+    "List and detail are API responses. The soak does not time browser rendering.",
+    "Phase read rate uses HTTP 200 list and detail counts divided by observed phase duration. Phase transitions have one-second elapsed-time precision.",
+    "Server creation-to-claim and first-claim-to-extracted timings cover only the baseline uploads.",
+    "Phase document completions are observed from status polling. Soak completion latency is attributed to the phase that accepted the document.",
+    "Queued/active document maxima come from the durable status poll. Redis waiting/active maxima are separate queue samples.",
+    "Skipped schedules mean the load generator deferred or omitted dispatch. They are distinct from HTTP 429 responses.",
+    "Host and container extrema are sampled. Docker CPU percent uses 100% per logical CPU."
+  ],
+  "rawFiles": {
+    "baseline.json": {
+      "sha256": "a5033b332c38bbdae0bab8cd1fb8c3295fdcefe126dcf544ca6aa8ad8a670534",
+      "uncompressedSHA256": "a5033b332c38bbdae0bab8cd1fb8c3295fdcefe126dcf544ca6aa8ad8a670534",
+      "uncompressedBytes": 3524
+    },
+    "soak.jsonl.gz": {
+      "sha256": "695df35fdbf890f67bec2702697585640f800be11365d25d694bfacae45b54aa",
+      "uncompressedSHA256": "828c95a81722ac4f23b50494c38d7ba44ff0aa6df7f05b3832cd68fea0d2e446",
+      "uncompressedBytes": 207549
+    },
+    "resources.tsv.gz": {
+      "sha256": "344173bccea27d434b96b2cebf31cc80d6b205db033f524bc8bcf9bd2b1c23a5",
+      "uncompressedSHA256": "33c41ad990a022c8a514a1512a447abf73efd76d55d5785ab69a5f73ace19e24",
+      "uncompressedBytes": 3712
+    },
+    "container-stats.jsonl.gz": {
+      "sha256": "dbc7ee5ea36856d12d36389d387e9f55b88df438d265244921f33322a866b8de",
+      "uncompressedSHA256": "cd4db31a827cac729f42ef180b5f8b5df4ba5dbdeb9d1cff6cb1efe2dfd98255",
+      "uncompressedBytes": 103484
+    }
+  }
+}

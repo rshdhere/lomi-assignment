@@ -1,6 +1,7 @@
 // Test-only OpenAI wire adapter. Read values from the supplied invoice so uploading
 // the wrong revision fails the carry-over assertion. Never enabled by compose.yaml.
 import { createServer } from "node:http";
+import { existsSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 
 const invoiceFields = {
@@ -25,9 +26,14 @@ createServer(async (req, res) => {
         })),
       };
     } else if (data.tool_choice?.function?.name === "retrieve") {
-      const mode = data.messages.at(-1).content.includes("exact")
+      const question = data.messages.at(-1).content;
+      const mode = /exact|reviewer's corrected/i.test(question)
         ? "lexical"
         : "semantic";
+      // Exercise a provider rewrite whose extra terms are absent from the PDF.
+      const query = question.includes("reviewer's corrected")
+        ? question
+        : "Meridian";
       result = {
         choices: [
           {
@@ -40,7 +46,7 @@ createServer(async (req, res) => {
                   type: "function",
                   function: {
                     name: "retrieve",
-                    arguments: JSON.stringify({ mode, query: "Meridian" }),
+                    arguments: JSON.stringify({ mode, query }),
                   },
                 },
               ],
@@ -64,6 +70,14 @@ createServer(async (req, res) => {
     } else if (
       data.response_format?.json_schema?.name === "document_extraction"
     ) {
+      if (existsSync("/tmp/lomi-reject-extraction")) {
+        res
+          .writeHead(503, { "content-type": "application/json" })
+          .end(
+            JSON.stringify({ error: { message: "Integration test outage" } }),
+          );
+        return;
+      }
       await delay(3000);
       const input = data.messages.at(-1).content;
       const values = Object.entries(invoiceFields).flatMap(([field, regex]) => {

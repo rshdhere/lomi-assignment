@@ -1,0 +1,161 @@
+{
+  "checkedAt": "2026-11-27T20:57:27.618187+00:00",
+  "environments": {
+    "staging": {
+      "dashboard": 200,
+      "health": {
+        "status": "ok"
+      },
+      "libraryCount": 3,
+      "canReadDetail": true,
+      "doc-report-001": {
+        "version": 1,
+        "status": "extracted",
+        "fieldCount": 6,
+        "gapFields": ["median_household_income"],
+        "allEvidenceValid": true
+      },
+      "doc-lease-001": {
+        "version": 1,
+        "status": "extracted",
+        "fieldCount": 5,
+        "gapFields": [],
+        "allEvidenceValid": true
+      },
+      "doc-invoice-001": {
+        "version": 1,
+        "status": "extracted",
+        "fieldCount": 5,
+        "gapFields": [],
+        "allEvidenceValid": true
+      }
+    },
+    "prod": {
+      "dashboard": 200,
+      "health": {
+        "status": "ok"
+      },
+      "libraryCount": 1,
+      "canReadDetail": true
+    }
+  },
+  "runningImageIdentities": {
+    "staging": {
+      "app_image": {
+        "tags": ["manual-c09f1e05702378094a750d69b97c2b54"],
+        "digest": "sha256:32fe76a9781da7eff5352315b658932561a39a7478f29c8c7ea330257af15d62",
+        "matchesRunning": true
+      },
+      "web_image": {
+        "tags": ["manual-c09f1e05702378094a750d69b97c2b54-fef4ca97dda2"],
+        "digest": "sha256:744e90cfab0cb288074beb252eb7d94923a5844a4be43592608fd115be0ffc03",
+        "matchesRunning": true
+      }
+    },
+    "prod": {
+      "app_image": {
+        "tags": ["manual-c09f1e05702378094a750d69b97c2b54"],
+        "digest": "sha256:32fe76a9781da7eff5352315b658932561a39a7478f29c8c7ea330257af15d62",
+        "matchesRunning": true
+      },
+      "web_image": {
+        "tags": ["manual-c09f1e05702378094a750d69b97c2b54-17f9c8beb413"],
+        "digest": "sha256:faaacd9252f494078a2da35c75ab3d8e3ffc18b14809ae39f66b3a1c10ee0f8e",
+        "matchesRunning": true
+      }
+    }
+  },
+  "stagingFlow": {
+    "startedAt": "2026-11-27T20:58:23.259Z",
+    "checks": {
+      "missingObjectRejected": true,
+      "signedStorageUpload": 204,
+      "freshFixture": "a110c5e7-65cc-4775-be7b-621412037e43",
+      "inFlightRevisionConflict": 409,
+      "batchReplay": true,
+      "v1Reviews": {
+        "pending": 0,
+        "approved": 4,
+        "corrected": 1,
+        "carriedOver": 0
+      },
+      "v2Reviews": {
+        "pending": 2,
+        "approved": 0,
+        "corrected": 0,
+        "carriedOver": 3
+      },
+      "pendingFields": ["due_date", "total_amount"],
+      "historyPreserved": true,
+      "query": {
+        "mode": "lexical",
+        "correctedValueIncluded": false,
+        "reviewedVersion2Citation": false
+      }
+    }
+  },
+  "scopedQueryObservations": [
+    {
+      "question": "What is the reviewer's corrected vendor name on this invoice?",
+      "mode": "lexical",
+      "answer": "I couldn't find evidence for that question in the indexed documents.",
+      "sources": []
+    },
+    {
+      "question": "What is the exact vendor name?",
+      "mode": "lexical",
+      "answer": "Meridian Office Supplies LLC",
+      "sources": [
+        {
+          "documentId": "a110c5e7-65cc-4775-be7b-621412037e43",
+          "version": 2,
+          "reviewed": true,
+          "field": "vendor_name"
+        }
+      ]
+    },
+    {
+      "question": "Who supplied the goods?",
+      "mode": "semantic",
+      "answer": "Meridian Office Supplies LLC supplied the goods.",
+      "sources": [
+        {
+          "documentId": "a110c5e7-65cc-4775-be7b-621412037e43",
+          "version": 2,
+          "reviewed": true,
+          "field": "vendor_name"
+        }
+      ]
+    }
+  ],
+  "durableWork": {
+    "staging": {
+      "snapshotCompletedAt": "2026-11-27T20:57:16.167Z",
+      "queued": 0,
+      "extracting": 0,
+      "failed": 0,
+      "expiredClaims": 0,
+      "workerConcurrency": 1
+    },
+    "prod": {
+      "snapshotCompletedAt": "2026-11-27T20:57:15.770Z",
+      "queued": 0,
+      "extracting": 0,
+      "failed": 0,
+      "expiredClaims": 0,
+      "workerConcurrency": 1
+    }
+  },
+  "isolatedCandidateQuery": {
+    "checkedAt": "2026-11-27T21:02:56.283Z",
+    "result": {
+      "mode": "lexical",
+      "reviewedVersion2Citation": true,
+      "answerContainsCorrection": true,
+      "sourceHashes": {
+        "/app/packages/services/src/query.ts": "5bf55fd6e00fb86979a3770067e18c6510b8b255ddb0e84d6ae913de48d5e304",
+        "/app/packages/drizzle/src/extraction.ts": "9c5e617f3f769993ca76d92449de912882fe8d5ee7b4380f996aacfa98f9fe0c"
+      }
+    }
+  }
+}

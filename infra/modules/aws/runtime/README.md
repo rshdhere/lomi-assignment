@@ -30,3 +30,11 @@ Use a Secrets Manager model secret with a raw API key or a JSON object containin
 - A host replacement takes the service offline while the volume and EIP move. Verify both DNS names over HTTPS from an allowed IP after replacement. Verify another source receives HTTP 403. Use an EBS snapshot before planned maintenance and test restoring it in a separate environment.
 
 AL2023 installs Docker and verifies the pinned Compose plugin before starting the stack. [Compose release digests](https://github.com/docker/compose/releases/expanded_assets/v5.7.1)
+
+## Reading queue health on staging and production
+
+Each environment runs its own private Redis, BullMQ extraction worker, PostgreSQL and S3 bucket. The AWS runtime configures one extraction slot per host. A healthy HTTP response confirms the API is reachable. The release verification also checks for a registered BullMQ worker and reports the durable queued, extracting, overdue-claim and failed-version counts, plus the age of the oldest queued version. [Release verification](../../../../.github/scripts/verify-host.sh)
+
+Compare successive observations. An increasing oldest queued age means intake is outpacing completion. A briefly expired claim can occur during recovery. Check whether the reconciler reclaims it and whether the version completes or exposes a retryable failure. Separate the API's upload throttles from provider rate limits when examining worker errors. Historical failed versions can remain until a reviewer retries them.
+
+For capacity decisions, repeat the same fixture mix with one and two extraction slots on a disposable production-sized host. Compare throughput, queue age, provider errors, available memory and CPU credits. Keep destructive Redis flushes in the isolated recovery project. Promote a tested commit through staging after its real-provider fixture walkthrough.

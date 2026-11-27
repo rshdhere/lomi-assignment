@@ -1,10 +1,24 @@
+import { httpTelemetry } from "@repo/common/telemetry";
 import cors from "cors";
 import express from "express";
 import { api, errorResponse } from "@repo/api";
 import { config } from "@repo/config";
 
-export function createApp() {
+export function createApp(telemetryEnabled = false) {
   const app = express();
+  if (telemetryEnabled) {
+    const startRequest = httpTelemetry();
+    app.use((req, res, next) => {
+      const request = startRequest(req.method);
+      res.once("close", () => {
+        // Express route templates omit document IDs, query strings and bodies.
+        const route =
+          typeof req.route?.path === "string" ? req.route.path : "unmatched";
+        request.finish(route, res.statusCode, !res.writableFinished);
+      });
+      request.run(next);
+    });
+  }
   app.disable("x-powered-by");
   if (config.trustSingleProxy) app.set("trust proxy", 1);
   app.use(

@@ -52,6 +52,43 @@ function verifyStack() {
     );
   }
   assert.equal(backend.Image, worker.Image, "API and worker images differ");
+  const workerConcurrency = Number(
+    docker(
+      ...compose,
+      "exec",
+      "-T",
+      "-w",
+      "/app/apps/worker",
+      "worker",
+      "node",
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "-e",
+      'import { config } from "@repo/config"; console.log(config.workerConcurrency);',
+    ),
+  );
+  assert.ok(Number.isSafeInteger(workerConcurrency) && workerConcurrency > 0);
+  const provider = readFileSync("tests/integration/provider.mjs", "utf8");
+  assert.equal(
+    docker(
+      ...compose,
+      "exec",
+      "-T",
+      "model-double",
+      "sha256sum",
+      "/test/provider.mjs",
+    ).split(" ")[0],
+    createHash("sha256").update(provider).digest("hex"),
+    "Model double differs from checkout",
+  );
+  // The integration fixture has one fixed delay in its extraction handler.
+  const delays = [...provider.matchAll(/await delay\((\d+)\);/g)];
+  assert.equal(
+    delays.length,
+    1,
+    "Check how this model double delays extraction",
+  );
   assert.ok(
     backend.NetworkSettings.Ports["4000/tcp"].some(
       (p) => p.HostIp === "127.0.0.1" && p.HostPort === "14000",
@@ -100,6 +137,8 @@ function verifyStack() {
     "Rebuild the integration image from this checkout before benchmarking",
   );
   return {
+    workerConcurrency,
+    modelDoubleDelayMs: Number(delays[0][1]),
     commit: git("rev-parse", "HEAD"),
     image: backend.Image,
     sourceDigest: createHash("sha256")
@@ -212,10 +251,10 @@ async function enqueue(i) {
     "Invoice intake was rejected; start with a fresh quota window",
   );
   assert.ok(res.data.id);
-  receipts.push({ id: res.data.id, start });
+  receipts.push({ id: res.data.id, start, accepted: performance.now() });
 }
 async function waitForDocument(index) {
-  const { id, start } = receipts[index];
+  const { id, start, accepted } = receipts[index];
   let state = "timed_out";
   try {
     while (performance.now() - start < config.drainLimitMs) {
@@ -225,6 +264,8 @@ async function waitForDocument(index) {
         "/documents/" + encodeURIComponent(id),
       );
       assert.equal(res.code, 200);
+      assert.equal(res.data.id, id);
+      assert.equal(res.data.version, 1);
       if (res.data.status === "failed") {
         state = "failed";
         throw Error("Extraction failed for " + id);
@@ -237,7 +278,12 @@ async function waitForDocument(index) {
           ),
         );
         state = "extracted";
-        completion.push(performance.now() - start);
+        const observed = performance.now();
+        completion.push({
+          id,
+          fromUploadMs: observed - start,
+          fromAcceptanceMs: observed - accepted,
+        });
         return;
       }
       assert.ok(["queued", "extracting"].includes(res.data.status));
@@ -252,11 +298,83 @@ async function waitForDocument(index) {
     outcomes[state] = (outcomes[state] ?? 0) + 1;
   }
 }
+
+function serverTimings() {
+  const ids = completion.map(({ id }) => id);
+  assert.equal(
+    new Set(receipts.map(({ id }) => id)).size,
+    receipts.length,
+    "Duplicate upload receipt",
+  );
+  const rows = JSON.parse(
+    execFileSync(
+      "docker",
+      [
+        ...compose,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-X",
+        "-qAt",
+        "-U",
+        "review",
+        "-d",
+        "review",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-v",
+        "ids=" + JSON.stringify(ids),
+      ],
+      {
+        encoding: "utf8",
+        input: `
+      BEGIN READ ONLY;
+      SELECT coalesce(json_agg(timing), '[]'::json) FROM (
+        SELECT v.doc_id AS id, count(a.claim_token)::int AS attempts,
+          extract(epoch FROM (min(a.started_at) - v.created_at)) * 1000 AS queue_ms,
+          extract(epoch FROM (v.updated_at - min(a.started_at))) * 1000 AS processing_ms
+        FROM document_versions v JOIN extraction_attempts a USING (version_id)
+        WHERE v.doc_id IN (SELECT json_array_elements_text(:'ids'::json))
+          AND v.version = 1 AND v.status = 'extracted'
+          AND NOT EXISTS (
+            SELECT 1 FROM extracted_values e JOIN reviews r USING (value_id)
+            WHERE e.version_id = v.version_id
+          )
+        GROUP BY v.version_id
+      ) timing;
+      COMMIT;
+    `,
+      },
+    ),
+  );
+  assert.deepEqual(
+    rows.map((r) => r.id).sort(),
+    [...ids].sort(),
+    "Missing PostgreSQL timing for an observed completion",
+  );
+  assert.ok(
+    rows.every(
+      (r) =>
+        r.attempts > 0 &&
+        [r.queue_ms, r.processing_ms].every(
+          (ms) => Number.isFinite(ms) && ms >= 0,
+        ),
+    ),
+    "Invalid server timestamps",
+  );
+  return {
+    documents: rows.length,
+    attempts: rows.reduce((n, r) => n + r.attempts, 0),
+    createdToFirstClaimMs: stats(rows.map((r) => r.queue_ms)),
+    firstClaimToExtractedMs: stats(rows.map((r) => r.processing_ms)),
+  };
+}
 const retries = [];
 async function waitForSeed() {
-  const deadline = Date.now() + config.drainLimitMs;
+  const deadline = performance.now() + config.drainLimitMs;
   let last = "API starting";
-  while (Date.now() < deadline) {
+  while (performance.now() < deadline) {
     try {
       const response = await fetch(api + "/documents", {
         signal: AbortSignal.timeout(5000),
@@ -322,7 +440,15 @@ async function run() {
     }
   });
   if (!retries.length) failures.push("The burst did not receive a 429");
+  if (retries.length === config.burst)
+    failures.push("The burst did not grant any manifests");
   endPhase("burst");
+  let postgres = null;
+  try {
+    postgres = serverTimings();
+  } catch (error) {
+    failures.push("PostgreSQL timing collection: " + error.message);
+  }
 
   const phases = Object.fromEntries(
     [...metrics].map(([name, m]) => [
@@ -351,7 +477,14 @@ async function run() {
         phases,
         receipts: receipts.length,
         outcomes,
-        uploadToExtractedMs: stats(completion),
+        uploadToExtractedMs: stats(completion.map((c) => c.fromUploadMs)),
+        acceptanceToExtractedMs: stats(
+          completion.map((c) => c.fromAcceptanceMs),
+        ),
+        observedBatchDocumentsPerSecond: Number(
+          ((completion.length * 1000) / phases.extraction.elapsedMs).toFixed(2),
+        ),
+        postgres,
         retryAfterSeconds: stats(retries),
         failures,
       },

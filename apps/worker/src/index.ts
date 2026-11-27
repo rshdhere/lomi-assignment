@@ -1,8 +1,15 @@
+import {
+  extractionTelemetry,
+  extractionStage,
+  observeQueue,
+  startTelemetry,
+} from "@repo/common/telemetry";
 import { setTimeout as delay } from "node:timers/promises";
 import { Queue, Worker } from "bullmq";
 import { config } from "@repo/config";
 import {
   claimVersion,
+  getExtractionQueueSnapshot,
   failClaim,
   finishClaim,
   pool,
@@ -26,51 +33,71 @@ const connection = {
   ...(redis.protocol === "rediss:" ? { tls: {} } : {}),
 };
 const queue = new Queue("extraction", { connection });
-const worker = new Worker<{ id: string }>(
+const telemetry = await startTelemetry("lomi-worker");
+const observeAttempt = telemetry ? extractionTelemetry() : undefined;
+if (telemetry) observeQueue(getExtractionQueueSnapshot);
+
+async function processVersion(
+  id: string,
+): Promise<"extracted" | "failed" | "skipped"> {
+  const claim = await claimVersion(id);
+  if (!claim) return "skipped";
+  const heartbeat = setInterval(
+    () =>
+      void renewClaim(claim).catch((error) =>
+        console.error("Claim renewal failed", error),
+      ),
+    20000,
+  );
+  try {
+    const bytes = await extractionStage("read pinned PDF", () =>
+      readPdf(claim.key, claim.objectVersion),
+    );
+    const text = await extractionStage("parse PDF", () => parsePdf(bytes));
+    const { type, values, chunks, metadata } = await extractionStage(
+      "extract and enrich",
+      async () => {
+        const classification = claim.type
+          ? null
+          : await classifyWithEvidence(text);
+        const type = claim.type ?? classification?.type;
+        if (!type)
+          throw new Error(
+            "Document type is unclear. Upload with an explicit document type.",
+          );
+        const { values, chunks, metadata } = await extractVersion(
+          claim,
+          text,
+          type,
+        );
+        return {
+          type,
+          values,
+          chunks,
+          metadata: classification ? { ...metadata, classification } : metadata,
+        };
+      },
+    );
+    const committed = await extractionStage("commit extraction", () =>
+      finishClaim(claim, text, type, values, chunks, metadata),
+    );
+    return committed ? "extracted" : "skipped";
+  } catch (error) {
+    await failClaim(
+      claim,
+      error instanceof Error ? error.message : "Extraction failed",
+    );
+    return "failed";
+  } finally {
+    clearInterval(heartbeat);
+  }
+}
+const worker = new Worker<{ id: string; traceparent?: string }>(
   "extraction",
   async (job) => {
-    const claim = await claimVersion(job.data.id);
-    if (!claim) return;
-    const heartbeat = setInterval(
-      () =>
-        void renewClaim(claim).catch((error) =>
-          console.error("Claim renewal failed", error),
-        ),
-      20000,
-    );
-    try {
-      const text = await parsePdf(
-        await readPdf(claim.key, claim.objectVersion),
-      );
-      const classification = claim.type
-        ? null
-        : await classifyWithEvidence(text);
-      const type = claim.type ?? classification?.type;
-      if (!type)
-        throw new Error(
-          "Document type is unclear. Upload with an explicit document type.",
-        );
-      const { values, chunks, metadata } = await extractVersion(
-        claim,
-        text,
-        type,
-      );
-      await finishClaim(
-        claim,
-        text,
-        type,
-        values,
-        chunks,
-        classification ? { ...metadata, classification } : metadata,
-      );
-    } catch (error) {
-      await failClaim(
-        claim,
-        error instanceof Error ? error.message : "Extraction failed",
-      );
-    } finally {
-      clearInterval(heartbeat);
-    }
+    const work = () => processVersion(job.data.id);
+    if (observeAttempt) await observeAttempt(job.data.traceparent, work);
+    else await work();
   },
   { connection, concurrency: config.workerConcurrency },
 );
@@ -96,9 +123,9 @@ while (!stopping) {
   try {
     const jobs = await scheduledVersions();
     await queue.addBulk(
-      jobs.map(({ id }) => ({
+      jobs.map(({ id, traceparent }) => ({
         name: "extract",
-        data: { id },
+        data: traceparent ? { id, traceparent } : { id },
         opts: { jobId: id, removeOnComplete: true, removeOnFail: true },
       })),
     );
@@ -109,4 +136,5 @@ while (!stopping) {
 }
 await worker.close();
 await queue.close();
+await telemetry?.shutdown();
 await pool.end();

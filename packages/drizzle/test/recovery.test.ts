@@ -14,6 +14,7 @@ import {
   claimVersion,
   finishClaim,
   failClaim,
+  getExtractionQueueSnapshot,
   scheduledVersions,
   reviewedSources,
   searchChunks,
@@ -57,6 +58,9 @@ test(
       assert.deepEqual(await createBatch([item]), [doc]);
       const first = await versionId(1);
       assert.ok((await scheduledVersions()).some((r) => r.id === first));
+      const waiting = await getExtractionQueueSnapshot();
+      assert.ok(waiting.queued >= 1);
+      assert.ok(waiting.oldestQueuedSeconds >= 0);
       const stale = (await claimVersion(first))!;
       assert.equal(await claimVersion(first), undefined);
       await assert.rejects(
@@ -66,6 +70,9 @@ test(
       await db.execute(
         sql`update document_versions set lease_until=now()-interval '1 second' where version_id=${first}`,
       );
+      const interrupted = await getExtractionQueueSnapshot();
+      assert.ok(interrupted.extracting >= 1);
+      assert.ok(interrupted.expiredClaims >= 1);
       const fresh = (await claimVersion(first))!;
       await failClaim(stale, "stale response");
       assert.equal((await getDocument(doc!.id)).status, "extracting");

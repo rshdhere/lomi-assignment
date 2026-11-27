@@ -1,0 +1,65 @@
+name: Load-test observability
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      full_hour:
+        type: boolean
+        description: Run the full one-hour soak after the baseline
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      COMPOSE_PROJECT_NAME: lomi-bench
+      COMPOSE_FILE: compose.yaml:tests/integration/compose.yaml:docs/observability/compose.yaml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Start the isolated application and telemetry services
+        run: |
+          docker compose config --quiet
+          docker compose build init
+          docker compose up -d --no-build
+      - name: Check extraction and all three telemetry signals
+        run: |
+          mkdir -p benchmark-results
+          node tests/bench/load.mjs > benchmark-results/baseline.json
+          node tests/bench/verify-observability.mjs > benchmark-results/telemetry.json
+      - name: Run the one-hour soak
+        if: inputs.full_hour == true
+        run: |
+          sleep 61
+          SOAK_SECONDS=3600 node tests/bench/soak.mjs > benchmark-results/soak.jsonl
+          node tests/bench/verify-observability.mjs > benchmark-results/telemetry-after-soak.json
+      - name: Save the dashboard capture
+        run: |
+          npm install --global pnpm@10.28.0
+          pnpm --filter web... install --frozen-lockfile
+          pnpm --filter web exec playwright install --with-deps chromium
+          dashboard_path=$(jq -er .dashboardPath benchmark-results/telemetry.json)
+          first_panel=$(jq -er .firstPanel benchmark-results/telemetry.json)
+          pnpm --filter web exec playwright screenshot --browser chromium --viewport-size "1600,1050" --full-page --wait-for-selector "text=$first_panel" --wait-for-timeout 5000 "http://127.0.0.1:13000$dashboard_path?from=now-75m&to=now&kiosk" "$GITHUB_WORKSPACE/benchmark-results/grafana.png"
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: load-test-${{ github.sha }}-${{ github.run_attempt }}
+          path: benchmark-results/
+          if-no-files-found: ignore
+      - name: Show container status and remove the disposable stack
+        if: always()
+        run: |
+          docker compose ps --all
+          docker compose down --volumes --remove-orphans

@@ -2,7 +2,7 @@
 
 Upload a PDF, compare each extracted value with its exact source passage, and approve or correct it. When a revision arrives, the reviewer can see which evidence changed and open the earlier version.
 
-[Hosted demo browser walkthrough](docs/browser-walkthrough.md)
+[Hosted demo](https://lomi.raashed.com) · [Browser walkthrough](docs/browser-walkthrough.md) · [Staging acceptance results](docs/testing/2026-11-28/deployed-smoke.md)
 
 ## Run it
 
@@ -53,6 +53,14 @@ GitHub Actions runs application, browser, recovery and Terraform checks on pull 
 
 This is a single-reviewer local stack with loopback ports. It supports text PDFs and a bounded model context. OCR, reviewer identity and tenant isolation are outside this implementation. Configure authentication, retention of uploaded objects and access controls for prompts and raw responses before exposing client documents. The AWS Terraform module provisions private storage with public access blocked, HTTPS enforcement, restricted signing permissions and a version-read-only worker role.
 
-At 10,000 documents the unpaginated library and periodic progress queries deserve measurement first. Compare list latency, submission latency, time waiting for a claim, provider latency and end-to-end completion under sustained load. Use those results to size workers, introduce pagination or change the reconciliation query. The classifier timing in this checkout covers local regex performance. The [captured fixture review](apps/frontend/evidence/revision-fixture.png) shows two pending fields after a model-double extraction and database-backed carry-over. Live model timings, the full Compose restart/flush run, the browser upload test and sustained load measurements are pending.
+On the disposable EC2 test stack, an invoice revision recovered 93.160 seconds after the worker was killed, Redis was emptied and the running services were restarted. The four approvals and one correction on v1 survived. Three reviews carried over to v2 and two fields returned to pending. [Recovery screenshot and recorded events](tests/integration/README.md)
+
+The one-hour API load test on an 8-vCPU `r7i.2xlarge` completed 1,118 invoice uploads with verified evidence and a saved vendor review on each. With a deterministic three-second model and two extraction slots, the peak phase sustained 60 library and detail reads per second. Peak p95 list latency was 49.4 ms, while peak p95 upload-to-extraction time reached 134.3 s. Up to 93 invoices waited or were extracting at once. The backlog cleared during cooldown. [Load results and screenshots](tests/bench/README.md)
+
+For the next load test, the optional observability stack streams application metrics and logs into Grafana. Open a worker trace in Jaeger to follow an upload through extraction. [Live benchmark instructions](docs/observability/README.md)
+
+![Grafana dashboard preview showing extraction backlog, latency by phase and Redis recovery during the benchmark](docs/testing/2026-11-27/grafana-dashboard.png)
+
+The classifier timings cover local regex performance. Live model timings, browser upload verification and a 10,000-document benchmark remain open. [Classifier measurements](packages/services/README.md) · [Fixture review screenshot](apps/frontend/evidence/revision-fixture.png)
 
 [Codex session transcript](https://gist.github.com/rshdhere/90a43fc37023e22aeb29ce1cff92f26a)

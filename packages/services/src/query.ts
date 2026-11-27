@@ -57,6 +57,7 @@ export async function answerQuestion(question: string, documentId?: string) {
     args.query,
     chunks.map((c) => c.id),
     documentId,
+    question,
   );
   const sources: Source[] = [
     ...reviews,
