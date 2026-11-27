@@ -294,7 +294,14 @@ export default function Home() {
             </span>
             Lomi Labs
           </div>
-          <div className="action-nav" ref={actions}>
+          <div
+            className="action-nav"
+            ref={actions}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget))
+                setActionsOpen(false);
+            }}
+          >
             <button
               type="button"
               className="actions-toggle"

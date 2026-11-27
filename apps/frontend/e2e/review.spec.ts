@@ -138,6 +138,12 @@ test("browse the mobile library and open the cited document version", async ({
   await expect(actions).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Tab");
   await expect(ask).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(browse).toBeFocused();
+  await expect(actions).toHaveAttribute("aria-expanded", "false");
+
+  await actions.click();
   await page.keyboard.press("Escape");
   await expect(ask).toBeHidden();
   await expect(actions).toBeFocused();

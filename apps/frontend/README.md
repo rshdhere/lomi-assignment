@@ -1,6 +1,8 @@
 # Reviewer workspace
 
-Open `http://localhost:3000` after starting the root Compose project. The document library shows the current extraction state, version, and count of reviewed fields. Selecting a document opens its values beside their verified passages. Use **Pending only** to focus on outstanding reviews.
+Open `http://localhost:3000` after starting the root Compose project. Search the library by document title or type. Each entry shows the extraction state, version, and number of fields reviewed. Select a document to compare its values with their source passages, then use **Pending only** to focus on outstanding reviews.
+
+On a phone, **Browse** opens the document library and **Actions** contains **Upload PDFs** and **Ask documents**.
 
 Approve a value as extracted, or select **Correct value**, enter the correction and optionally add a note. A gap includes its reason. Use **Upload revision** with `fixtures/documents/invoice-001.v2.pdf` after reviewing the original invoice. Check the carried-over reviews and the previous values beside the changed due date and total. The version menu opens earlier evidence and reviews.
 
@@ -17,7 +19,7 @@ pnpm --filter web exec playwright install --with-deps chromium
 pnpm --filter web test:e2e
 ```
 
-The browser test creates a fresh invoice using the dashboard, records an approval and a correction, uploads the revised PDF, checks both pending fields and all three carried reviews, and opens version 1 again. It also checks the missing income field on the seeded report. Screenshots of the running application are saved to `apps/frontend/evidence/`.
+The Chromium tests run against the Compose stack. They upload an invoice, record approvals and a correction, upload a revision, verify two pending fields and three carried reviews, and open version 1 again. They also check the missing income field on the seeded report. The mobile test filters the library, checks keyboard focus after closing a dialog, and follows a citation to its document version. It uses a fixed answer to exercise citation navigation. Screenshots of each run are saved to `apps/frontend/evidence/`.
 
 ### Captured fixture review
 
