@@ -1,15 +1,3 @@
-# types
+# Wire types
 
-To install dependencies:
-
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.3. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+The dashboard imports review summaries, field evidence, progress counts and upload receipts from `@repo/types/reviewer`. Schema-backed input types are exposed by `@repo/types`.

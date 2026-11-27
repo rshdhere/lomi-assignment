@@ -1,0 +1,257 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RuntimeRegistryLogin",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "RuntimeImages",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+      ],
+      "Resource": [
+        "arn:aws:ecr:{{REGION}}:{{ACCOUNT_ID}}:repository/lomi/{{ENVIRONMENT}}/app",
+        "arn:aws:ecr:{{REGION}}:{{ACCOUNT_ID}}:repository/lomi/{{ENVIRONMENT}}/web"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime"
+        }
+      }
+    },
+    {
+      "Sid": "RuntimeModelSecret",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "{{MODEL_SECRET_ARN}}",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime"
+        }
+      }
+    },
+    {
+      "Sid": "RuntimeModelKey",
+      "Effect": "Allow",
+      "Action": "kms:Decrypt",
+      "Resource": "{{MODEL_KMS_KEY_ARN}}",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime"
+        },
+        "StringEquals": {
+          "kms:ViaService": "secretsmanager.{{REGION}}.amazonaws.com",
+          "kms:EncryptionContext:SecretARN": "{{MODEL_SECRET_ARN}}"
+        }
+      }
+    },
+    {
+      "Sid": "RuntimeDocumentSessions",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": [
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-pdf-app",
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-pdf-worker"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime"
+        }
+      }
+    },
+    {
+      "Sid": "RuntimeManagedNode",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:UpdateInstanceInformation",
+        "ssm:DescribeAssociation",
+        "ssm:ListAssociations",
+        "ssm:ListInstanceAssociations",
+        "ssm:UpdateAssociationStatus",
+        "ssm:UpdateInstanceAssociationStatus",
+        "ssm:DescribeDocument",
+        "ssm:GetDocument",
+        "ssm:GetManifest",
+        "ssm:GetDeployablePatchSnapshotForInstance",
+        "ssm:PutInventory",
+        "ssm:PutComplianceItems",
+        "ssm:PutConfigurePackageResult",
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel",
+        "ec2messages:AcknowledgeMessage",
+        "ec2messages:DeleteMessage",
+        "ec2messages:FailMessage",
+        "ec2messages:GetEndpoint",
+        "ec2messages:GetMessages",
+        "ec2messages:SendReply"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "AppDocuments",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:GetObjectVersion"],
+      "Resource": "arn:aws:s3:::lomi-{{ENVIRONMENT}}-documents-*/documents/*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-pdf-app"
+        },
+        "StringEquals": {
+          "s3:ResourceAccount": "{{ACCOUNT_ID}}",
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "WorkerDocuments",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectVersion",
+      "Resource": "arn:aws:s3:::lomi-{{ENVIRONMENT}}-documents-*/documents/*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-pdf-worker"
+        },
+        "StringEquals": {
+          "s3:ResourceAccount": "{{ACCOUNT_ID}}",
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "IdentifyBackupVolumes",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVolumes",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeInstances",
+        "ec2:DescribeAvailabilityZones"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "SnapshotDataVolume",
+      "Effect": "Allow",
+      "Action": "ec2:CreateSnapshot",
+      "Resource": "arn:aws:ec2:{{REGION}}:{{ACCOUNT_ID}}:volume/*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+        },
+        "StringEquals": {
+          "ec2:ResourceTag/LomiBackup": "lomi-{{ENVIRONMENT}}",
+          "ec2:ResourceTag/Environment": "{{ENVIRONMENT}}",
+          "ec2:ResourceTag/Application": "lomi"
+        }
+      }
+    },
+    {
+      "Sid": "Write{{ENVIRONMENT_TITLE}}Snapshot",
+      "Effect": "Allow",
+      "Action": "ec2:CreateSnapshot",
+      "Resource": "arn:aws:ec2:{{REGION}}::snapshot/*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+        }
+      }
+    },
+    {
+      "Sid": "TagNewSnapshot",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:{{REGION}}::snapshot/*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+        },
+        "StringEquals": {
+          "ec2:CreateAction": "CreateSnapshot"
+        }
+      }
+    },
+    {
+      "Sid": "TagDlmSnapshot",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:{{REGION}}::snapshot/*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+        },
+        "StringEquals": {
+          "ec2:ResourceTag/aws:dlm:lifecycle-schedule-name": "daily-data-backup"
+        },
+        "StringEqualsIfExists": {
+          "ec2:ResourceTag/LomiBackup": "lomi-{{ENVIRONMENT}}"
+        }
+      }
+    },
+    {
+      "Sid": "Expire{{ENVIRONMENT_TITLE}}Snapshot",
+      "Effect": "Allow",
+      "Action": "ec2:DeleteSnapshot",
+      "Resource": "arn:aws:ec2:{{REGION}}::snapshot/*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+        },
+        "StringEquals": {
+          "ec2:ResourceTag/LomiBackup": "lomi-{{ENVIRONMENT}}",
+          "ec2:ResourceTag/aws:dlm:lifecycle-schedule-name": "daily-data-backup"
+        }
+      }
+    },
+    {
+      "Sid": "ScheduleSnapshots",
+      "Effect": "Allow",
+      "Action": [
+        "events:PutRule",
+        "events:DeleteRule",
+        "events:DescribeRule",
+        "events:EnableRule",
+        "events:DisableRule",
+        "events:ListTargetsByRule",
+        "events:PutTargets",
+        "events:RemoveTargets"
+      ],
+      "Resource": "arn:aws:events:{{REGION}}:{{ACCOUNT_ID}}:rule/AwsDataLifecycleRule.managed-cwe.*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+        }
+      }
+    }
+  ]
+}

@@ -1,15 +1,7 @@
-# backend
+# HTTP server and fixture bootstrap
 
-To install dependencies:
+Compose runs the seed command after Postgres and private object storage are ready. It applies migrations and accepts only version 1 of each fixture into the durable extraction queue. Rerunning the seed skips existing document IDs, including documents subsequently revised in the dashboard.
 
-```bash
-bun install
-```
+`src/app.ts` mounts the Express application. Routes and OpenAPI belong to [the API package](../../packages/api/v1/README.md). Extraction runs in a separate worker so neither its latency nor Redis availability controls whether a valid multipart upload receives a receipt.
 
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.3. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+![Focused HTTP, PDF, storage and database test results](../../docs/evidence/focused-tests.png)

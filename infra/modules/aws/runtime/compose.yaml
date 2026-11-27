@@ -1,0 +1,116 @@
+name: lomi
+x-process: &process
+  restart: unless-stopped
+  logging:
+    driver: local
+    options: { max-size: 8m, max-file: "3" }
+x-app: &app
+  <<: *process
+  image: ${APP_IMAGE}
+  init: true
+  user: "1000:1000"
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  volumes: [/run/lomi/app-aws:/run/lomi-aws:ro]
+services:
+  postgres:
+    <<: *process
+    image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
+    mem_limit: 512m
+    shm_size: 96m
+    env_file: [{ path: /run/lomi/postgres.env, format: raw }]
+    command: [postgres, -c, shared_buffers=96MB, -c, max_connections=60]
+    volumes: [/srv/lomi/postgres:/var/lib/postgresql/data]
+    networks: [database]
+    healthcheck:
+      test: [CMD, pg_isready, -U, lomi_admin, -d, lomi]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 90s
+  redis:
+    <<: *process
+    image: redis:7-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
+    mem_limit: 160m
+    command: [redis-server, /etc/lomi/redis.conf]
+    env_file: [{ path: /run/lomi/redis.env, format: raw }]
+    volumes:
+      [
+        /srv/lomi/redis:/data,
+        /srv/lomi/secrets/redis.conf:/etc/lomi/redis.conf:ro,
+      ]
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, redis-cli ping | grep -qx PONG]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  admin:
+    <<: *app
+    profiles: [admin]
+    restart: "no"
+    mem_limit: 448m
+    env_file: [{ path: /run/lomi/admin.env, format: raw }]
+    networks: [database, outbound]
+  backend:
+    <<: *app
+    command: [pnpm, --filter, "@repo/backend", start]
+    mem_limit: 640m
+    env_file: [{ path: /run/lomi/backend.env, format: raw }]
+    networks: [api, database, outbound]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+  worker:
+    <<: *app
+    command: [pnpm, --filter, "@repo/worker", start]
+    mem_limit: 768m
+    env_file: [{ path: /run/lomi/worker.env, format: raw }]
+    volumes: [/run/lomi/worker-aws:/run/lomi-aws:ro]
+    networks: [database, outbound]
+    stop_grace_period: 90s
+  frontend:
+    <<: *process
+    image: ${WEB_IMAGE}
+    user: "1000:1000"
+    init: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 480m
+    networks: [web]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+  proxy:
+    <<: *process
+    image: caddy:2.11.7-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
+    mem_limit: 128m
+    env_file: [{ path: /run/lomi/proxy.env, format: raw }]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - /srv/lomi/proxy:/etc/caddy:ro
+      - /srv/lomi/caddy-data:/data
+      - /srv/lomi/caddy-config:/config
+    networks: [api, web, public]
+networks:
+  database: { internal: true }
+  api: { internal: true }
+  web: { internal: true }
+  outbound: {}
+  public: {}

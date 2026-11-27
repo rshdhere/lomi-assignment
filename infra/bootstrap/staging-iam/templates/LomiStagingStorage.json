@@ -1,0 +1,194 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreateTagged{{ENVIRONMENT_TITLE}}Buckets",
+      "Effect": "Allow",
+      "Action": "s3:CreateBucket",
+      "Resource": [
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}",
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-documents-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "{{REGION}}",
+          "aws:RequestTag/Application": "lomi",
+          "aws:RequestTag/Environment": "{{ENVIRONMENT}}"
+        },
+        "StringEqualsIfExists": {
+          "s3:ResourceAccount": "{{ACCOUNT_ID}}",
+          "s3:LocationConstraint": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "TagBucketsOnCreation",
+      "Effect": "Allow",
+      "Action": "s3:TagResource",
+      "Resource": [
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}",
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-documents-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "{{REGION}}",
+          "aws:RequestTag/Application": "lomi",
+          "aws:RequestTag/Environment": "{{ENVIRONMENT}}"
+        },
+        "StringEqualsIfExists": {
+          "s3:ResourceAccount": "{{ACCOUNT_ID}}"
+        }
+      }
+    },
+    {
+      "Sid": "ReadAndConfigureOwned{{ENVIRONMENT_TITLE}}Buckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetBucketAcl",
+        "s3:GetBucketCORS",
+        "s3:GetBucketLogging",
+        "s3:GetBucketObjectLockConfiguration",
+        "s3:GetBucketOwnershipControls",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketRequestPayment",
+        "s3:GetBucketTagging",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketWebsite",
+        "s3:GetAccelerateConfiguration",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration",
+        "s3:GetReplicationConfiguration",
+        "s3:ListTagsForResource",
+        "s3:TagResource",
+        "s3:UntagResource",
+        "s3:PutBucketTagging",
+        "s3:PutBucketOwnershipControls",
+        "s3:PutBucketPolicy",
+        "s3:DeleteBucketPolicy",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutBucketVersioning",
+        "s3:PutEncryptionConfiguration"
+      ],
+      "Resource": [
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}",
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-documents-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "s3:ResourceAccount": "{{ACCOUNT_ID}}",
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "ConfigureOrReplace{{ENVIRONMENT_TITLE}}DocumentBucket",
+      "Effect": "Allow",
+      "Action": ["s3:PutBucketCORS", "s3:DeleteBucket"],
+      "Resource": "arn:aws:s3:::lomi-{{ENVIRONMENT}}-documents-*",
+      "Condition": {
+        "StringEquals": {
+          "s3:ResourceAccount": "{{ACCOUNT_ID}}",
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "ReadWrite{{ENVIRONMENT_TITLE}}States",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": [
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}/bootstrap/terraform.tfstate",
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}/environments/{{ENVIRONMENT}}/terraform.tfstate"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "s3:ResourceAccount": "{{ACCOUNT_ID}}",
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "Manage{{ENVIRONMENT_TITLE}}StateLocks",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}/bootstrap/terraform.tfstate.tflock",
+        "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}/environments/{{ENVIRONMENT}}/terraform.tfstate.tflock"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "s3:ResourceAccount": "{{ACCOUNT_ID}}",
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "UseManagedS3KeyFor{{ENVIRONMENT_TITLE}}State",
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"],
+      "Resource": "arn:aws:kms:{{REGION}}:{{ACCOUNT_ID}}:key/*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "s3.{{REGION}}.amazonaws.com",
+          "kms:EncryptionContext:aws:s3:arn": [
+            "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}",
+            "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}/bootstrap/terraform.tfstate",
+            "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}/environments/{{ENVIRONMENT}}/terraform.tfstate",
+            "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}/bootstrap/terraform.tfstate.tflock",
+            "arn:aws:s3:::lomi-{{ENVIRONMENT}}-tfstate-{{ACCOUNT_ID}}-{{REGION}}/environments/{{ENVIRONMENT}}/terraform.tfstate.tflock"
+          ]
+        },
+        "ForAnyValue:StringEquals": {
+          "kms:ResourceAliases": "alias/aws/s3"
+        }
+      }
+    },
+    {
+      "Sid": "Configure{{ENVIRONMENT_TITLE}}ReleaseRegistries",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DescribeRepositories",
+        "ecr:ListTagsForResource",
+        "ecr:TagResource",
+        "ecr:UntagResource",
+        "ecr:PutImageTagMutability",
+        "ecr:PutImageScanningConfiguration"
+      ],
+      "Resource": [
+        "arn:aws:ecr:{{REGION}}:{{ACCOUNT_ID}}:repository/lomi/{{ENVIRONMENT}}/app",
+        "arn:aws:ecr:{{REGION}}:{{ACCOUNT_ID}}:repository/lomi/{{ENVIRONMENT}}/web"
+      ]
+    },
+    {
+      "Sid": "AuthenticateToRegionalECR",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "{{REGION}}"
+        }
+      }
+    },
+    {
+      "Sid": "Publish{{ENVIRONMENT_TITLE}}ReleaseImages",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:CompleteLayerUpload",
+        "ecr:DescribeImages",
+        "ecr:InitiateLayerUpload",
+        "ecr:PutImage",
+        "ecr:UploadLayerPart"
+      ],
+      "Resource": [
+        "arn:aws:ecr:{{REGION}}:{{ACCOUNT_ID}}:repository/lomi/{{ENVIRONMENT}}/app",
+        "arn:aws:ecr:{{REGION}}:{{ACCOUNT_ID}}:repository/lomi/{{ENVIRONMENT}}/web"
+      ]
+    }
+  ]
+}

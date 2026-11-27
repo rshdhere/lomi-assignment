@@ -1,15 +1,3 @@
-# common
+# Common helpers
 
-To install dependencies:
-
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.3. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+`HttpError` associates an expected request failure with the HTTP status the API returns to a client.

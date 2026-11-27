@@ -1,0 +1,104 @@
+#!/bin/bash
+set -euo pipefail
+umask 077
+install -d -m 0700 /opt/lomi
+cd /opt/lomi
+base64 -d >config.json <<'CONFIG'
+${config_b64}
+CONFIG
+base64 -d >compose.yaml <<'COMPOSE'
+${compose_b64}
+COMPOSE
+base64 -d >start <<'SCRIPT'
+${refresh_b64}
+SCRIPT
+chmod 0700 start
+
+# Elastic IP attachment can finish after cloud-init starts. Tolerate missing egress.
+for attempt in {1..20}; do
+  if dnf --setopt=timeout=15 --setopt=retries=2 install -y docker awscli-2 iptables-nft e2fsprogs diffutils; then break; fi
+  [[ $attempt -lt 20 ]] || exit 1
+  sleep 10
+done
+systemctl enable --now amazon-ssm-agent
+# https://github.com/docker/compose/releases/expanded_assets/v5.7.1
+case "$(uname -m)" in
+  x86_64) arch=x86_64; digest=af426722a8af5de812fcee30cc1c39f0639f5f723cbadefb25e5d4db054064cf ;;
+  aarch64) arch=aarch64; digest=f2f49f903240895fa764c0dca3a14548b754ad9426f6b609ccaf55ec5a3aa2a5 ;;
+  *) exit 1 ;;
+esac
+curl --fail --silent --show-error --location --retry 14 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 90 \
+  "https://github.com/docker/compose/releases/download/v5.7.1/docker-compose-linux-$arch" -o compose.bin
+echo "$digest  compose.bin" | sha256sum --check -
+install -D -m 0755 compose.bin /usr/local/lib/docker/cli-plugins/docker-compose
+docker compose version
+# Enforce this mount before the daemon can restore any persisted containers on reboot.
+cat >/etc/systemd/system/lomi-volume.service <<'UNIT'
+[Unit]
+Description=Mount the retained Lomi data volume
+Before=docker.service
+After=local-fs.target
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/lomi
+ExecStart=/opt/lomi/start --mount
+TimeoutStartSec=30min
+UNIT
+install -d /etc/systemd/system/docker.service.d
+cat >/etc/systemd/system/docker.service.d/lomi-volume.conf <<'UNIT'
+[Unit]
+Requires=lomi-volume.service
+After=lomi-volume.service
+UNIT
+
+cat >/etc/systemd/system/lomi.service <<'UNIT'
+[Unit]
+Description=Lomi application
+After=docker.service network-online.target
+PartOf=docker.service
+Requires=docker.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/lomi
+ExecStart=/opt/lomi/start
+ExecStop=/usr/bin/docker compose --env-file /run/lomi/compose.env stop
+TimeoutStartSec=15min
+TimeoutStopSec=3min
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+cat >/etc/systemd/system/lomi-refresh.service <<'UNIT'
+[Unit]
+Description=Refresh rotated Lomi credentials
+After=lomi.service
+Requires=lomi.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/lomi
+ExecStart=/opt/lomi/start --if-rotated
+TimeoutStartSec=15min
+UNIT
+
+cat >/etc/systemd/system/lomi-refresh.timer <<'UNIT'
+[Unit]
+Description=Check Lomi runtime secret versions
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=3min
+[Install]
+WantedBy=timers.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable docker lomi.service lomi-refresh.timer
+systemctl start lomi-refresh.timer lomi.service

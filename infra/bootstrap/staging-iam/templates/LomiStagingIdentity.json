@@ -1,0 +1,102 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageBounded{{ENVIRONMENT_TITLE}}Roles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:UpdateRole",
+        "iam:UpdateRoleDescription",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:DeleteRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime",
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-pdf-app",
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-pdf-worker",
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::{{ACCOUNT_ID}}:policy/Lomi{{ENVIRONMENT_TITLE}}WorkloadBoundary"
+        }
+      }
+    },
+    {
+      "Sid": "ReadAndTag{{ENVIRONMENT_TITLE}}Roles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:ListRolePolicies",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime",
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-pdf-app",
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-pdf-worker",
+        "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots"
+      ]
+    },
+    {
+      "Sid": "Manage{{ENVIRONMENT_TITLE}}InstanceProfile",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:TagInstanceProfile",
+        "iam:UntagInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile"
+      ],
+      "Resource": "arn:aws:iam::{{ACCOUNT_ID}}:instance-profile/lomi-{{ENVIRONMENT}}-runtime"
+    },
+    {
+      "Sid": "Attach{{ENVIRONMENT_TITLE}}InstanceSsmCore",
+      "Effect": "Allow",
+      "Action": ["iam:AttachRolePolicy", "iam:DetachRolePolicy"],
+      "Resource": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime",
+      "Condition": {
+        "ArnEquals": {
+          "iam:PolicyARN": "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+          "iam:PermissionsBoundary": "arn:aws:iam::{{ACCOUNT_ID}}:policy/Lomi{{ENVIRONMENT_TITLE}}WorkloadBoundary"
+        }
+      }
+    },
+    {
+      "Sid": "Pass{{ENVIRONMENT_TITLE}}RuntimeToEc2",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-runtime",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ec2.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "Pass{{ENVIRONMENT_TITLE}}SnapshotRoleToDlm",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::{{ACCOUNT_ID}}:role/lomi-{{ENVIRONMENT}}-data-snapshots",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "dlm.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "ReadPublic{{ENVIRONMENT_TITLE}}Ami",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": "arn:aws:ssm:{{REGION}}::parameter/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+    }
+  ]
+}

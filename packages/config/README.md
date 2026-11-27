@@ -1,15 +1,3 @@
-# config
+# Configuration
 
-To install dependencies:
-
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.3. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+The API advertises its active upload limits at `GET /limits`. The Compose defaults allow ten files of up to 10 MiB each. Set `MAX_BATCH_FILES` and `MAX_FILE_BYTES` to override them. Limits must be positive integers. Endpoint, model, and storage settings live in [the root Compose file](../../compose.yaml).

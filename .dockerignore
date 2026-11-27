@@ -1,0 +1,19 @@
+.git
+.agents
+.codex
+.aws
+.env*
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+*.log
+
+# Deployment configuration and Terraform state must stay outside app images
+infra
+**/.terraform
+**/*.tfstate*
+**/*.tfplan
+**/*.tfvars
+**/*.tfbackend

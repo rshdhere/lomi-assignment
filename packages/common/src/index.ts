@@ -1,1 +1,8 @@
-console.log("Hello via Bun!");
+export class HttpError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}

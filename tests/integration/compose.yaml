@@ -1,0 +1,22 @@
+# Run from the repository root with -p lomi-check -f compose.yaml -f tests/integration/compose.yaml.
+services:
+  model-double:
+    image: node:24-bookworm-slim
+    volumes: [./tests/integration/provider.mjs:/test/provider.mjs:ro]
+    command: [node, /test/provider.mjs]
+  frontend:
+    profiles: [web-test]
+  backend:
+    ports: !override ["127.0.0.1:14000:4000"]
+    environment:
+      OPENAI_API_KEY: test-only
+      OPENAI_BASE_URL: http://model-double:4545/v1
+      S3_PUBLIC_ENDPOINT: http://localhost:19000
+  storage:
+    ports: !override ["127.0.0.1:19000:9000"]
+  worker:
+    environment:
+      OPENAI_API_KEY: test-only
+      OPENAI_BASE_URL: http://model-double:4545/v1
+    depends_on:
+      model-double: { condition: service_started }

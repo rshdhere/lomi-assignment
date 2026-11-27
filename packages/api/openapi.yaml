@@ -1,5 +1,821 @@
+---
 openapi: 3.1.0
 info:
-  title: Lomi API
-  version: "0.1.0"
-paths: {}
+  title: Lomi document review
+  version: 1.0.0
+  description:
+    Single-reviewer local deployment. All API operations are unauthenticated.
+    Direct S3 POST forms authorize one object key.
+security: []
+servers:
+  - url: http://localhost:4000
+paths:
+  "/health":
+    get:
+      summary: Process health
+      responses:
+        "200":
+          description: Process health
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    const: ok
+                required:
+                  - status
+  "/limits":
+    get:
+      summary: Active upload limits
+      responses:
+        "200":
+          description: Active upload limits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  maxFileBytes:
+                    type: integer
+                  maxBatchFiles:
+                    type: integer
+                required:
+                  - maxFileBytes
+                  - maxBatchFiles
+  "/documents":
+    get:
+      summary: List current documents
+      responses:
+        "200":
+          description: List current documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documents:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/DocumentSummary"
+                required:
+                  - documents
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+    post:
+      summary: Accept a PDF for extraction
+      responses:
+        "202":
+          description: Accept a PDF for extraction
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Receipt"
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "413":
+          "$ref": "#/components/responses/TooLarge"
+        "415":
+          "$ref": "#/components/responses/UnsupportedType"
+        "422":
+          "$ref": "#/components/responses/InvalidPDF"
+        "429":
+          "$ref": "#/components/responses/RateLimited"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              "$ref": "#/components/schemas/NewDocument"
+  "/documents/{id}/versions":
+    post:
+      summary: Accept a PDF for extraction
+      responses:
+        "202":
+          description: Accept a PDF for extraction
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Receipt"
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "413":
+          "$ref": "#/components/responses/TooLarge"
+        "415":
+          "$ref": "#/components/responses/UnsupportedType"
+        "422":
+          "$ref": "#/components/responses/InvalidPDF"
+        "429":
+          "$ref": "#/components/responses/RateLimited"
+        "404":
+          "$ref": "#/components/responses/NotFound"
+        "409":
+          "$ref": "#/components/responses/Conflict"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              "$ref": "#/components/schemas/NewVersion"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[\\w-]{1,128}$"
+  "/documents/{id}":
+    get:
+      summary: Read a document version and its reviews
+      responses:
+        "200":
+          description: Read a document version and its reviews
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DocumentDetail"
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "404":
+          "$ref": "#/components/responses/NotFound"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[\\w-]{1,128}$"
+        - name: version
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2147483647
+          description: Defaults to the current version.
+  "/documents/{id}/progress":
+    get:
+      summary: Count reviews for the current version
+      responses:
+        "200":
+          description: Count reviews for the current version
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Progress"
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "404":
+          "$ref": "#/components/responses/NotFound"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[\\w-]{1,128}$"
+  "/documents/{id}/retry":
+    post:
+      summary: Retry a failed current version
+      responses:
+        "202":
+          description: Retry a failed current version
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    pattern: "^[\\w-]{1,128}$"
+                  status:
+                    const: queued
+                required:
+                  - id
+                  - status
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "404":
+          "$ref": "#/components/responses/NotFound"
+        "409":
+          "$ref": "#/components/responses/Conflict"
+        "429":
+          "$ref": "#/components/responses/RateLimited"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+        "413":
+          "$ref": "#/components/responses/TooLarge"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[\\w-]{1,128}$"
+  "/values/{id}/review":
+    post:
+      summary: Approve a field or save a correction
+      responses:
+        "200":
+          description: Approve a field or save a correction
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved:
+                    const: true
+                required:
+                  - saved
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "404":
+          "$ref": "#/components/responses/NotFound"
+        "409":
+          "$ref": "#/components/responses/Conflict"
+        "429":
+          "$ref": "#/components/responses/RateLimited"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+        "413":
+          "$ref": "#/components/responses/TooLarge"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/ReviewInput"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[\\w-]{1,128}$"
+  "/uploads":
+    post:
+      summary: Create a batch and signed POST forms
+      responses:
+        "201":
+          description: Create a batch and signed POST forms
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BatchForm"
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "404":
+          "$ref": "#/components/responses/NotFound"
+        "409":
+          "$ref": "#/components/responses/Conflict"
+        "429":
+          "$ref": "#/components/responses/RateLimited"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+        "413":
+          "$ref": "#/components/responses/TooLarge"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/BatchManifest"
+  "/uploads/{batchId}/complete":
+    post:
+      summary: Verify pinned objects and queue every document atomically
+      responses:
+        "202":
+          description: Verify pinned objects and queue every document atomically
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BatchReceipt"
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "404":
+          "$ref": "#/components/responses/NotFound"
+        "409":
+          "$ref": "#/components/responses/Conflict"
+        "429":
+          "$ref": "#/components/responses/RateLimited"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+        "413":
+          "$ref": "#/components/responses/TooLarge"
+        "422":
+          description:
+            Invalid PDF data or unknown document types which require a
+            selection.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - "$ref": "#/components/schemas/NeedsType"
+                  - "$ref": "#/components/schemas/Error"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/TypeSelections"
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+  "/query":
+    post:
+      summary: Retrieve source passages and answer a question
+      responses:
+        "200":
+          description: Retrieve source passages and answer a question
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/QueryResult"
+        "400":
+          "$ref": "#/components/responses/BadRequest"
+        "429":
+          "$ref": "#/components/responses/RateLimited"
+        "503":
+          "$ref": "#/components/responses/Unavailable"
+        "413":
+          "$ref": "#/components/responses/TooLarge"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/QueryInput"
+components:
+  schemas:
+    DocumentType:
+      type: string
+      enum:
+        - invoice
+        - lease
+        - market_report
+    Status:
+      type: string
+      enum:
+        - queued
+        - extracting
+        - extracted
+        - failed
+    Progress:
+      type: object
+      properties:
+        pending:
+          type: integer
+          minimum: 0
+        approved:
+          type: integer
+          minimum: 0
+        corrected:
+          type: integer
+          minimum: 0
+        carriedOver:
+          type: integer
+          minimum: 0
+      required:
+        - pending
+        - approved
+        - corrected
+        - carriedOver
+    DocumentSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: "^[\\w-]{1,128}$"
+        title:
+          type: string
+        type:
+          "$ref": "#/components/schemas/DocumentType"
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        currentVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        status:
+          "$ref": "#/components/schemas/Status"
+        updatedAt:
+          type: string
+          format: date-time
+        error:
+          type:
+            - string
+            - "null"
+        progress:
+          "$ref": "#/components/schemas/Progress"
+      required:
+        - id
+        - title
+        - type
+        - version
+        - currentVersion
+        - status
+        - updatedAt
+        - error
+        - progress
+    FieldReview:
+      type: object
+      properties:
+        action:
+          enum:
+            - approve
+            - correct
+        value:
+          type:
+            - string
+            - "null"
+        note:
+          type:
+            - string
+            - "null"
+      required:
+        - action
+        - value
+        - note
+    ExtractedField:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        field:
+          type: string
+        reason:
+          type:
+            - string
+            - "null"
+        carriedOver:
+          type: boolean
+        previous:
+          anyOf:
+            - type: object
+              properties:
+                value:
+                  type:
+                    - string
+                    - "null"
+                quote:
+                  type:
+                    - string
+                    - "null"
+                review:
+                  anyOf:
+                    - "$ref": "#/components/schemas/FieldReview"
+                    - type: "null"
+              required:
+                - value
+                - quote
+                - review
+            - type: "null"
+        value:
+          type:
+            - string
+            - "null"
+        quote:
+          type:
+            - string
+            - "null"
+        review:
+          anyOf:
+            - "$ref": "#/components/schemas/FieldReview"
+            - type: "null"
+      required:
+        - id
+        - field
+        - reason
+        - carriedOver
+        - previous
+        - value
+        - quote
+        - review
+    DocumentDetail:
+      allOf:
+        - "$ref": "#/components/schemas/DocumentSummary"
+        - type: object
+          properties:
+            versions:
+              type: array
+              items:
+                type: integer
+                minimum: 1
+                maximum: 2147483647
+            parsedText:
+              type:
+                - string
+                - "null"
+            values:
+              type: array
+              items:
+                "$ref": "#/components/schemas/ExtractedField"
+          required:
+            - versions
+            - parsedText
+            - values
+    Receipt:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: "^[\\w-]{1,128}$"
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        status:
+          "$ref": "#/components/schemas/Status"
+      required:
+        - id
+        - version
+        - status
+    BatchReceipt:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Receipt"
+      required:
+        - documents
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+    NeedsType:
+      type: object
+      properties:
+        message:
+          type: string
+        needsType:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - message
+        - needsType
+    ReviewInput:
+      oneOf:
+        - type: object
+          properties:
+            action:
+              const: approve
+          required:
+            - action
+          additionalProperties: false
+        - type: object
+          properties:
+            action:
+              const: correct
+            value:
+              type: string
+              minLength: 1
+              maxLength: 4000
+            note:
+              type: string
+              maxLength: 2000
+          required:
+            - action
+            - value
+          additionalProperties: false
+    BatchManifest:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                pattern: "^[^/\\\\\\u0000-\\u001f]+\\.[pP][dD][fF]$"
+                minLength: 5
+                maxLength: 250
+              size:
+                type: integer
+                minimum: 1
+                description: At most maxFileBytes from GET /limits.
+              type:
+                "$ref": "#/components/schemas/DocumentType"
+              documentId:
+                type: string
+                pattern: "^[\\w-]{1,128}$"
+            required:
+              - name
+              - size
+            additionalProperties: false
+          minItems: 1
+          description:
+            At most maxBatchFiles from GET /limits. Each existing document
+            may appear once.
+      required:
+        - files
+      additionalProperties: false
+    BatchForm:
+      type: object
+      properties:
+        batchId:
+          type: string
+          format: uuid
+        uploads:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              url:
+                type: string
+                format: uri
+              fields:
+                type: object
+                additionalProperties:
+                  type: string
+            required:
+              - id
+              - url
+              - fields
+      required:
+        - batchId
+        - uploads
+    TypeSelections:
+      type: object
+      properties:
+        types:
+          type: object
+          propertyNames:
+            type: string
+            format: uuid
+          additionalProperties:
+            "$ref": "#/components/schemas/DocumentType"
+      required: []
+      additionalProperties: false
+    QueryInput:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        documentId:
+          type: string
+          pattern: "^[\\w-]{1,128}$"
+      required:
+        - question
+      additionalProperties: false
+    QueryResult:
+      type: object
+      properties:
+        mode:
+          enum:
+            - lexical
+            - semantic
+        answer:
+          type: string
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              documentId:
+                type: string
+                pattern: "^[\\w-]{1,128}$"
+              title:
+                type: string
+              version:
+                type: integer
+                minimum: 1
+                maximum: 2147483647
+              quote:
+                type: string
+              field:
+                type: string
+              value:
+                type: string
+              reviewed:
+                type: boolean
+            required:
+              - id
+              - documentId
+              - title
+              - version
+              - quote
+              - reviewed
+      required:
+        - mode
+        - answer
+        - sources
+    NewDocument:
+      type: object
+      properties:
+        type:
+          "$ref": "#/components/schemas/DocumentType"
+        file:
+          type: string
+          format: binary
+          description:
+            application/pdf, PDF filename, up to maxFileBytes from GET
+            /limits.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 250
+      required:
+        - type
+        - file
+      additionalProperties: false
+    NewVersion:
+      type: object
+      properties:
+        type:
+          "$ref": "#/components/schemas/DocumentType"
+        file:
+          type: string
+          format: binary
+          description:
+            application/pdf, PDF filename, up to maxFileBytes from GET
+            /limits.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 250
+      required:
+        - file
+      additionalProperties: false
+  responses:
+    BadRequest:
+      description: Malformed input
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    TooLarge:
+      description: Request or PDF exceeds the allowed size
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    UnsupportedType:
+      description: Expected a PDF file part
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    NotFound:
+      description: Document, version, value or batch missing
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    Conflict:
+      description: Document state or incomplete batch prevents this operation
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    InvalidPDF:
+      description: Unreadable PDF data
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    Unavailable:
+      description: Required integration unavailable
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    RateLimited:
+      description: Too many requests from this IP
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: Seconds until this client may retry.

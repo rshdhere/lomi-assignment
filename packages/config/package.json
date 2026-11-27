@@ -1,14 +1,17 @@
 {
-  "name": "config",
-  "module": "index.ts",
-  "type": "module",
+  "name": "@repo/config",
+  "version": "0.1.0",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "7.0.2"
-  },
+  "type": "module",
+  "exports": "./src/index.ts",
   "scripts": {
-    "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3"
   }
 }

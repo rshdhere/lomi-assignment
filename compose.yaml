@@ -1,0 +1,107 @@
+name: lomi
+x-env: &app-env
+  DATABASE_URL: postgres://review:review@postgres:5432/review
+  REDIS_URL: redis://redis:6379
+  S3_ENDPOINT: http://storage:9000
+  S3_PUBLIC_ENDPOINT: http://localhost:9000
+  S3_BUCKET: review-pdfs
+  S3_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: review-app
+  AWS_SECRET_ACCESS_KEY: ${LOCAL_STORAGE_PASSWORD:-local-review-documents}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+  OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6.2-luna}
+  EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+  FIXTURES_DIR: /app/fixtures
+  UI_ORIGIN: http://localhost:3000
+  MAX_FILE_BYTES: ${MAX_FILE_BYTES:-10485760}
+  MAX_BATCH_FILES: ${MAX_BATCH_FILES:-10}
+
+x-app: &app
+  image: lomi-app:local
+  environment: *app-env
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: review
+      POSTGRES_PASSWORD: review
+      POSTGRES_DB: review
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U review -d review]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --maxmemory-policy, noeviction]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  storage:
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5@sha256:6dabb4a2088c9a79908de3bc05f4586c23ad2182c8908e7e3acbf61c1467fb20
+    entrypoint: [minio]
+    command: server /bitnami/minio/data
+    ports: ["127.0.0.1:9000:9000"]
+    environment:
+      MINIO_ROOT_USER: local-admin
+      MINIO_ROOT_PASSWORD: ${LOCAL_STORAGE_ADMIN_PASSWORD:-local-only-storage-admin}
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:3000
+    volumes: [pdfs:/bitnami/minio/data]
+  storage-init:
+    image: bitnamilegacy/minio-client:2025.7.21-debian-12-r3@sha256:73bd39f7899a0cef12b8dd5df13aa93a3ed1aaa44236542442e9ac76819ac158
+    depends_on: [storage]
+    environment:
+      MINIO_ROOT_USER: local-admin
+      MINIO_ROOT_PASSWORD: ${LOCAL_STORAGE_ADMIN_PASSWORD:-local-only-storage-admin}
+      MC_CONFIG_DIR: /tmp/mc
+      WORKER_USER: review-worker
+      WORKER_PASSWORD: ${LOCAL_WORKER_STORAGE_PASSWORD:-local-worker-documents}
+      APP_USER: review-app
+      APP_PASSWORD: ${LOCAL_STORAGE_PASSWORD:-local-review-documents}
+    volumes: [./infra/modules/aws/s3/local:/config:ro]
+    entrypoint: [/bin/sh, /config/init.sh]
+  init:
+    <<: *app
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: app
+    depends_on:
+      postgres: { condition: service_healthy }
+      storage-init: { condition: service_completed_successfully }
+    command: [pnpm, --filter, "@repo/backend", seed]
+  backend:
+    <<: *app
+    pull_policy: never
+    depends_on:
+      init: { condition: service_completed_successfully }
+    ports: ["127.0.0.1:4000:4000"]
+    command: [pnpm, --filter, "@repo/backend", start]
+    restart: unless-stopped
+  worker:
+    <<: *app
+    pull_policy: never
+    environment:
+      <<: *app-env
+      AWS_ACCESS_KEY_ID: review-worker
+      AWS_SECRET_ACCESS_KEY: ${LOCAL_WORKER_STORAGE_PASSWORD:-local-worker-documents}
+    depends_on:
+      init: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    command: [pnpm, --filter, "@repo/worker", start]
+    restart: unless-stopped
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: web
+    depends_on: [backend]
+    ports: ["127.0.0.1:3000:3000"]
+volumes:
+  pgdata:
+  pdfs:

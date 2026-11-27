@@ -1,0 +1,5 @@
+bucket = "lomi-prod-tfstate-123456789012-ap-south-1"
+region = "ap-south-1"
+allowed_account_ids = ["123456789012"]
+# AWS-managed S3 KMS key in the bucket's account.
+kms_key_id = "arn:aws:kms:ap-south-1:123456789012:alias/aws/s3"

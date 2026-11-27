@@ -1,0 +1,32 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RunApprovedDocument",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": "arn:aws:ssm:{{REGION}}::document/AWS-RunShellScript"
+    },
+    {
+      "Sid": "RunOnEnvironmentHost",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": "arn:aws:ec2:{{REGION}}:{{ACCOUNT_ID}}:instance/*",
+      "Condition": {
+        "StringEquals": {
+          "ssm:resourceTag/Application": "lomi",
+          "ssm:resourceTag/Environment": "{{ENVIRONMENT}}",
+          "ssm:resourceTag/Name": "lomi-{{ENVIRONMENT}}-app",
+          "ssm:resourceTag/ManagedBy": "terraform"
+        }
+      }
+    },
+    {
+      "Sid": "InspectCommandStatus",
+      "Effect": "Allow",
+      "Action": ["ssm:DescribeInstanceInformation", "ssm:GetCommandInvocation"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "{{REGION}}" } }
+    }
+  ]
+}

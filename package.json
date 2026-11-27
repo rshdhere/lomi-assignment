@@ -4,11 +4,12 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "eslint apps packages tooling eslint.config.mjs --max-warnings 0",
+    "lint": "turbo run lint",
     "format": "prettier --write .",
     "check-types": "turbo run check-types",
     "prepare": "husky",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "turbo run test"
   },
   "devDependencies": {
     "prettier": "3.9.6",
@@ -22,18 +23,7 @@
   "engines": {
     "node": ">=24"
   },
-  "devEngines": {
-    "packageManager": {
-      "name": "bun",
-      "version": "1.2.3"
-    }
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "tooling/*"
-  ],
-  "packageManager": "bun@1.2.3",
+  "packageManager": "pnpm@10.28.0",
   "lint-staged": {
     "{apps,packages,tooling}/**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}": [
       "eslint --fix --max-warnings 0",
