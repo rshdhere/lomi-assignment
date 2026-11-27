@@ -328,6 +328,8 @@
 }
 
 .citation-number {
+  flex: none;
+  white-space: nowrap;
   color: var(--muted);
 }
 

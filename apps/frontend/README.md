@@ -21,7 +21,9 @@ pnpm --filter web test:e2e
 
 The Chromium tests run against the Compose stack. They upload an invoice, record approvals and a correction, upload a revision, verify two pending fields and three carried reviews, and open version 1 again. They also check the missing income field on the seeded report. The mobile test filters the library, checks keyboard focus after closing a dialog, and follows a citation to its document version. It uses a fixed answer to exercise citation navigation. Screenshots of each run are saved to `apps/frontend/evidence/`.
 
-### Captured fixture review
+Hosted CI also saves `workspace-desktop.png`, `workspace-mobile.png`, and `query-mobile.png` in the browser job's **review-screenshots** artifact.
+
+### Archived fixture review
 
 The screenshot shows the reviewer with **Pending only** selected for invoice v2. Both original PDFs were parsed with Poppler, processed with the integration model double, and persisted through Drizzle in PGlite with pgvector. The capture mounted the dashboard component with its real CSS and replayed those database results to the browser. It covers the revision display. The Playwright test above also exercises upload, polling and review actions against Compose.
 

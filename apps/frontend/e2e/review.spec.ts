@@ -101,6 +101,7 @@ test("browse the mobile library and open the cited document version", async ({
   page,
 }) => {
   const invoice = "Invoice — Meridian Office Supplies";
+  const report = "Market report excerpt — Eastport Rental Market, Q3";
   const lease = "Lease excerpt — 1200 Harbor Street, Unit 4B";
   const invoiceId = "doc-invoice-001";
   const title = page.locator("#document-detail h2.document-title");
@@ -111,11 +112,11 @@ test("browse the mobile library and open the cited document version", async ({
 
   await mkdir(screenshots, { recursive: true });
   await page.goto("/");
-  await library.getByRole("button", { name: new RegExp(invoice) }).click();
-  await expect(title).toHaveText(invoice);
-  await expect(
-    page.getByRole("heading", { name: "Invoice number" }),
-  ).toBeVisible({
+  const search = page.getByRole("searchbox", { name: "Find a document" });
+  await search.fill("excerpt");
+  await library.getByRole("button", { name: new RegExp(report) }).click();
+  await expect(title).toHaveText(report);
+  await expect(page.getByRole("heading", { name: "Market area" })).toBeVisible({
     timeout: 120_000,
   });
   await page.evaluate(async () => {
@@ -159,7 +160,6 @@ test("browse the mobile library and open the cited document version", async ({
   await expect(actions).toBeFocused();
 
   await browse.click();
-  const search = page.getByRole("searchbox", { name: "Find a document" });
   await search.fill("1200 Harbor Street");
   await expect(library.getByRole("button")).toHaveCount(1);
   await library.getByRole("button", { name: new RegExp(lease) }).click();

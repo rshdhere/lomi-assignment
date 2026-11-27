@@ -366,7 +366,13 @@ export default function Home() {
                 <WorkspaceIcon name="folder" />
                 Documents
               </h2>
-              {docs && <span className="library-count">{docs.length}</span>}
+              {docs && (
+                <span className="library-count">
+                  {query
+                    ? `${visibleDocs?.length} of ${docs.length}`
+                    : docs.length}
+                </span>
+              )}
               <button
                 className="library-toggle"
                 type="button"
