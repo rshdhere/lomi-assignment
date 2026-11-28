@@ -1,7 +1,7 @@
 import { extractionStage } from "@repo/common/telemetry";
 import { readFile } from "node:fs/promises";
 import { recordAttempt, type Claim, type DocumentType } from "@repo/drizzle";
-import { structured, embed } from "./model.ts";
+import { structured, embed, attemptContext } from "./model.ts";
 import { validateValues, segmentText } from "./evidence.ts";
 
 const expected = JSON.parse(
@@ -54,8 +54,10 @@ export async function extractVersion(
     .join("\n");
   const transcript = JSON.stringify({ system: prompt, input: numbered });
   await recordAttempt(claim.token, transcript, null);
-  const raw = await extractionStage("provider extraction", () =>
-    structured(prompt, numbered, "document_extraction", schema),
+  const raw = await attemptContext.run(claim.token, () =>
+    extractionStage("provider extraction", () =>
+      structured(prompt, numbered, "document_extraction", schema),
+    ),
   );
   await recordAttempt(claim.token, transcript, raw);
   const parsed = JSON.parse(raw);
