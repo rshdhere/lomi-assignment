@@ -17,6 +17,7 @@ import {
   scheduledVersions,
 } from "@repo/drizzle";
 import {
+  TransientProviderError,
   classifyWithEvidence,
   extractVersion,
   parsePdf,
@@ -86,6 +87,12 @@ async function processVersion(
     await failClaim(
       claim,
       error instanceof Error ? error.message : "Extraction failed",
+      error instanceof TransientProviderError
+        ? Math.max(
+            error.retryAfterMs,
+            2 ** claim.attempt * 1000 + Math.random() * 1000,
+          )
+        : undefined,
     );
     return "failed";
   } finally {

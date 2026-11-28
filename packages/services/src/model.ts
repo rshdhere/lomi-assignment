@@ -11,6 +11,15 @@ export type Message = {
   }[];
 };
 
+export class TransientProviderError extends Error {
+  constructor(
+    message: string,
+    readonly retryAfterMs: number,
+  ) {
+    super(message);
+  }
+}
+
 async function post(path: string, body: unknown) {
   if (!config.openaiApiKey)
     throw new Error("Configure OPENAI_API_KEY and retry extraction");
@@ -35,6 +44,17 @@ async function post(path: string, body: unknown) {
           : undefined,
       requestId: result.headers.get("x-request-id"),
     });
+    if (result.status === 429 || result.status >= 500) {
+      const header = result.headers.get("retry-after");
+      const delay =
+        header && /^\d+$/.test(header)
+          ? Number(header) * 1000
+          : Date.parse(header ?? "") - Date.now();
+      throw new TransientProviderError(
+        `Model provider returned HTTP ${result.status} for ${path}`,
+        Number.isFinite(delay) ? Math.max(0, delay) : 0,
+      );
+    }
     throw new Error(
       `Model provider returned HTTP ${result.status} for ${path}. Check the configured model and retry.`,
     );
