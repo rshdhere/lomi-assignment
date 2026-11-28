@@ -63,6 +63,11 @@ paths:
         "503":
           "$ref": "#/components/responses/Unavailable"
     post:
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          description: UUID identifying this submission for one day within the single-reviewer service. Reuse with different inputs returns 409.
+          schema: { type: string, format: uuid }
       summary: Accept a PDF for extraction
       responses:
         "202":
@@ -122,6 +127,10 @@ paths:
             schema:
               "$ref": "#/components/schemas/NewVersion"
       parameters:
+        - in: header
+          name: Idempotency-Key
+          description: UUID identifying this submission for one day within the single-reviewer service. Reuse with different inputs returns 409.
+          schema: { type: string, format: uuid }
         - name: id
           in: path
           required: true
@@ -261,6 +270,11 @@ paths:
             pattern: "^[\\w-]{1,128}$"
   "/uploads":
     post:
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          description: UUID identifying this submission for one day within the single-reviewer service. Reuse with different inputs returns 409.
+          schema: { type: string, format: uuid }
       summary: Create a batch and signed POST forms
       responses:
         "201":

@@ -19,11 +19,15 @@ type BatchRow = {
   result: { id: string; version: number; status: string }[] | null;
 };
 
-export async function saveBatch(id: string, files: BatchFile[]) {
-  await db.execute(
+export async function saveBatch(
+  id: string,
+  files: BatchFile[],
+  connection: Pick<typeof db, "execute"> = db,
+) {
+  await connection.execute(
     sql`DELETE FROM upload_batches WHERE created_at < now() - interval '1 day'`,
   );
-  await db.execute(
+  await connection.execute(
     sql`INSERT INTO upload_batches (id,files) VALUES (${id},${JSON.stringify(files)}::jsonb)`,
   );
 }
@@ -55,5 +59,40 @@ export async function acceptUploadBatch(id: string, items: StoredUpload[]) {
       sql`UPDATE upload_batches SET result=${JSON.stringify(documents)}::jsonb WHERE id=${id}`,
     );
     return documents;
+  });
+}
+
+type ReceiptConnection = Pick<typeof db, "execute" | "transaction">;
+export async function replayUpload<T>(
+  scope: string,
+  key: string | undefined,
+  fingerprint: string,
+  write: (connection: ReceiptConnection) => Promise<T>,
+): Promise<T> {
+  if (!key) return write(db);
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${scope + key}, 11))`,
+    );
+    await tx.execute(
+      sql`delete from upload_receipts where expires_at <= now()`,
+    );
+    const { rows } = await tx.execute<{
+      fingerprint: string;
+      response: unknown;
+    }>(sql`
+      select fingerprint,response from upload_receipts where scope=${scope} and request_key=${key}`);
+    if (rows[0]) {
+      if (rows[0].fingerprint !== fingerprint)
+        throw new HttpError(
+          409,
+          "Idempotency key already used for a different upload",
+        );
+      return rows[0].response as T;
+    }
+    const result = await write(tx);
+    await tx.execute(sql`insert into upload_receipts(scope,request_key,fingerprint,response)
+      values (${scope},${key},${fingerprint},${JSON.stringify(result)}::jsonb)`);
+    return result;
   });
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { DocumentType, UploadBatch } from "@repo/types/reviewer";
 import { api, ApiError, errorMessage, post, typeLabels } from "./client";
 import { Modal } from "./modal";
@@ -27,6 +27,7 @@ export function Upload({
   const [baseVersion] = useState(expectedVersion);
   const [limits, setLimits] = useState<Limits>();
   const [entries, setEntries] = useState<FileEntry[]>([]);
+  const manifestKey = useRef<{ body: string; key: string } | null>(null);
   const [batch, setBatch] = useState<UploadBatch>();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -45,6 +46,7 @@ export function Upload({
   }, [attempt]);
 
   async function select(files: File[]) {
+    manifestKey.current = null;
     setBatch(undefined);
     setEntries([]);
     setNeedsType([]);
@@ -81,15 +83,25 @@ export function Upload({
     setMessage("");
     try {
       setStep("Preparing upload…");
+      const body = JSON.stringify({
+        files: entries.map(({ file, type }) => ({
+          name: file.name,
+          size: file.size,
+          ...(documentId ? { documentId, expectedVersion: baseVersion } : {}),
+          ...(type ? { type } : {}),
+        })),
+      });
+      if (manifestKey.current?.body !== body)
+        manifestKey.current = { body, key: crypto.randomUUID() };
       const session =
         batch ??
-        (await post<UploadBatch>("/uploads", {
-          files: entries.map(({ file, type }) => ({
-            name: file.name,
-            size: file.size,
-            ...(documentId ? { documentId, expectedVersion: baseVersion } : {}),
-            ...(type ? { type } : {}),
-          })),
+        (await api<UploadBatch>("/uploads", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": manifestKey.current.key,
+          },
+          body,
         }));
       setBatch(session);
       setStep("Uploading PDFs…");
