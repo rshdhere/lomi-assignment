@@ -84,7 +84,12 @@ export function Analytics({
   const linePath = chartPoints
     .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
     .join(" ");
-  const areaPath = `${linePath} L${chartPoints[chartPoints.length - 1].x},118 L${chartPoints[0].x},118 Z`;
+  const firstPoint = chartPoints[0];
+  const lastPoint = chartPoints.at(-1);
+  const areaPath =
+    firstPoint && lastPoint
+      ? `${linePath} L${lastPoint.x},118 L${firstPoint.x},118 Z`
+      : "";
   const stageCounts = stages.map(
     ({ key }) => docs.filter((doc) => doc.status === key).length,
   );
@@ -303,7 +308,7 @@ export function Analytics({
                     );
                   return count > 0 ? (
                     <circle
-                      key={stages[index].key}
+                      key={stages[index]?.key ?? index}
                       className="donut-segment"
                       cx="60"
                       cy="60"
