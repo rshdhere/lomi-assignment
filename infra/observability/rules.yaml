@@ -1,0 +1,22 @@
+groups:
+  - name: extraction
+    rules:
+      - alert: ExtractionQueueDelayed
+        expr: max(lomi_queue_oldest_queued_seconds) > 300
+        for: 2m
+        annotations:
+          summary: Oldest queued extraction has exceeded five minutes.
+      - alert: ExtractionLeaseOverdue
+        expr: max(lomi_queue_expired_claims) > 0
+        for: 2m
+        annotations:
+          summary: Expired extraction leases persist across reconciliation cycles.
+      - alert: ExtractionFailureBurst
+        expr: sum(increase(lomi_extraction_attempts_total{outcome="failed"}[5m])) >= 3
+        annotations:
+          summary: Three or more extraction failures in five minutes.
+      - alert: ExtractionQueueTelemetryMissing
+        expr: absent_over_time(lomi_queue_queued[5m]) or (up{job="lomi-collector"} == 0)
+        for: 1m
+        annotations:
+          summary: The collector or queue measurements are unavailable.

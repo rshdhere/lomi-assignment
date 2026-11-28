@@ -138,12 +138,13 @@ export async function finishClaim(
       const carry = canCarryReview(old?.quote, value.quote, !!old?.action);
       // An approval attaches to the specific value the reviewer saw. The model
       // may render a different value from identical evidence on a later run.
+      const start = value.quote ? text.indexOf(value.quote) : -1;
       const trustedValue =
         carry && old?.action === "approve" ? old.value : value.value;
       const id = randomUUID();
       await tx.execute(sql`insert into extracted_values
-        (value_id,version_id,field,value,quote,gap_reason,previous_id,carried_over)
-        values (${id},${claim.versionId},${value.field},${trustedValue},${value.quote},${value.reason},${old?.id ?? null},${carry})`);
+        (value_id,version_id,field,value,quote,gap_reason,previous_id,carried_over,model_value,quote_start,quote_end)
+        values (${id},${claim.versionId},${value.field},${trustedValue},${value.quote},${value.reason},${old?.id ?? null},${carry},${value.value},${start < 0 ? null : start},${start < 0 ? null : start + value.quote!.length})`);
       if (carry && old) {
         await tx.execute(
           sql`insert into reviews(value_id,action,correction,note) values (${id},${old.action},${old.correction},${old.note})`,
@@ -260,7 +261,7 @@ export async function claimIndex(id: string) {
       sections: Omit<Chunk, "embedding">[];
     }>(sql`
       update stage_work set owner_token=${token}, next_offer_at=now()+interval '10 minutes'
-      where version_id=${id} and stage='index' and (owner_token is null or exists(
+      where version_id=${id} and stage='index' and ((owner_token is null and exists(select 1 from document_versions where version_id=${id} and indexing_status='queued')) or exists(
         select 1 from document_versions where version_id=${id} and indexing_status='indexing'
         and updated_at < now()-interval '10 minutes')) returning sections`);
     if (!claimed.rows[0]) return;

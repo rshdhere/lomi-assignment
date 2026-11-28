@@ -25,6 +25,7 @@ export interface FieldReview {
   note: string | null;
 }
 export interface ExtractedField {
+  reviewRevision?: number;
   id: string;
   field: string;
   value: string | null;

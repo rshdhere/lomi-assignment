@@ -17,6 +17,7 @@ export function ReviewField({
   current: boolean;
   refresh: () => void;
 }) {
+  const [editRevision, setEditRevision] = useState<number>();
   const [editing, setEditing] = useState(false);
   const [correction, setCorrection] = useState("");
   const [note, setNote] = useState("");
@@ -29,6 +30,8 @@ export function ReviewField({
     try {
       await post(`/values/${encodeURIComponent(item.id)}/review`, {
         action,
+        expectedRevision:
+          action === "correct" ? editRevision : item.reviewRevision,
         ...(action === "correct"
           ? { value: correction.trim(), note: note.trim() || undefined }
           : {}),
@@ -130,6 +133,7 @@ export function ReviewField({
             onClick={() => {
               setCorrection(item.review?.value ?? item.value ?? "");
               setNote(item.review?.note ?? "");
+              setEditRevision(item.reviewRevision);
               setEditing(true);
             }}
           >
