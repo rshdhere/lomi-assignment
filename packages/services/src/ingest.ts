@@ -1,3 +1,4 @@
+import { isolatedParse } from "./parser-client.ts";
 import { Readable, addAbortSignal } from "node:stream";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -52,7 +53,11 @@ export function validatePdfBytes(bytes: Buffer) {
 
 // Poppler also checks the cross-reference table and page tree. Both direct and
 // multipart uploads pass the same parser before they can enter an extraction batch.
-async function validatePdf(bytes: Buffer) {
+export async function validatePdf(bytes: Buffer) {
+  if (process.env.PDF_PARSER_SOCKET) {
+    await isolatedParse(process.env.PDF_PARSER_SOCKET, "/validate", bytes);
+    return;
+  }
   validatePdfBytes(bytes);
   await new Promise<void>((resolve, reject) => {
     const child = spawn("pdfinfo", ["-"], {

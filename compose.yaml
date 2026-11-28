@@ -1,5 +1,6 @@
 name: lomi
 x-env: &app-env
+  PDF_PARSER_SOCKET: /run/pdf-parser/parser.sock
   DATABASE_URL: postgres://review:review@postgres:5432/review
   REDIS_URL: redis://redis:6379
   S3_ENDPOINT: http://storage:9000
@@ -18,10 +19,43 @@ x-env: &app-env
   MAX_BATCH_FILES: ${MAX_BATCH_FILES:-10}
 
 x-app: &app
+  volumes: [parser-socket:/run/pdf-parser:ro]
   image: lomi-app:local
   environment: *app-env
 
 services:
+  pdf-parser:
+    image: lomi-app:local
+    command:
+      [
+        node,
+        --experimental-transform-types,
+        packages/services/src/parser-server.ts,
+      ]
+    network_mode: none
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 48
+    mem_limit: 192m
+    cpus: 1
+    restart: unless-stopped
+    tmpfs: ["/tmp:size=8m,noexec,nosuid,nodev"]
+    environment:
+      MAX_FILE_BYTES: ${MAX_FILE_BYTES:-10485760}
+    volumes: [parser-socket:/run/pdf-parser]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "require('fs').accessSync('/run/pdf-parser/parser.sock')",
+        ]
+      interval: 3s
+      timeout: 2s
+      retries: 15
   postgres:
     image: pgvector/pgvector:pg16
     environment:
@@ -74,6 +108,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       storage-init: { condition: service_completed_successfully }
+      pdf-parser: { condition: service_healthy }
     command: [pnpm, --filter, "@repo/backend", seed]
   backend:
     <<: *app
@@ -103,5 +138,6 @@ services:
     depends_on: [backend]
     ports: ["127.0.0.1:3000:3000"]
 volumes:
+  parser-socket:
   pgdata:
   pdfs:

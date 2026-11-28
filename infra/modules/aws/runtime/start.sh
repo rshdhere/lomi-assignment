@@ -252,7 +252,7 @@ for registry in $(printf '%s\n' "${app_image%%/*}" "${web_image%%/*}" | sort -u)
 done
 if [[ ${1:-} != --if-rotated ]]; then
   compose pull
-  compose up -d --wait --wait-timeout 180 postgres redis
+  compose up -d --wait --wait-timeout 180 postgres redis pdf-parser
   if [[ $(readcfg environment) == staging ]]; then
     compose run --rm --no-deps admin pnpm --filter @repo/backend seed
   else
