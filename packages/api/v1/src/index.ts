@@ -5,12 +5,14 @@ import {
   getDocument,
   getProgress,
   listDocuments,
+  listDocumentPage,
   retryDocument,
   reviewValue,
 } from "@repo/drizzle";
 import { answerQuestion } from "@repo/services";
 import {
   identifier,
+  pageSize,
   question,
   review,
   versionNumber,
@@ -30,7 +32,13 @@ api.get("/limits", (_req, res) => {
     maxBatchFiles: config.maxBatchFiles,
   });
 });
-api.get("/documents", async (_req, res) => {
+api.get("/documents", async (req, res) => {
+  if (req.query.limit !== undefined || req.query.cursor !== undefined) {
+    const limit = pageSize.parse(req.query.limit ?? 50);
+    const cursor = identifier.optional().parse(req.query.cursor);
+    res.json(await listDocumentPage(limit, cursor));
+    return;
+  }
   res.json({ documents: await listDocuments() });
 });
 api.get("/documents/:id", async (req, res) => {

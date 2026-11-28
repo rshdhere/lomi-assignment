@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const documentType = z.enum(["invoice", "lease", "market_report"]);
 export const identifier = z.string().regex(/^[\w-]{1,128}$/);
+export const pageSize = z.coerce.number().int().min(1).max(100);
 export const versionNumber = z.coerce.number().int().min(1).max(2147483647);
 export const review = z.discriminatedUnion("action", [
   z.object({ action: z.literal("approve") }).strict(),
