@@ -6,6 +6,8 @@ function positiveInteger(name: string, fallback: number) {
 }
 
 export const config = {
+  modelContextBudget: positiveInteger("MODEL_CONTEXT_BUDGET", 262144),
+  modelOutputReserve: positiveInteger("MODEL_OUTPUT_RESERVE", 8192),
   databaseUrl:
     process.env.DATABASE_URL ??
     "postgres://postgres:postgres@localhost:5432/lomi",

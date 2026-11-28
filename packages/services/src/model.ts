@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import { recordProviderUsage } from "@repo/drizzle";
 import { config } from "@repo/config";
 
 export type Message = {
@@ -20,7 +22,19 @@ export class TransientProviderError extends Error {
   }
 }
 
-async function post(path: string, body: unknown) {
+export const attemptContext = new AsyncLocalStorage<string>();
+async function post(path: string, body: Record<string, unknown>) {
+  const started = performance.now();
+  const encoded = JSON.stringify(body);
+  if (
+    path === "/chat/completions" &&
+    Buffer.byteLength(encoded) + config.modelOutputReserve >
+      config.modelContextBudget
+  )
+    throw new Error(
+      "Request exceeds configured model context budget after reserving output",
+    );
+
   if (!config.openaiApiKey)
     throw new Error("Configure OPENAI_API_KEY and retry extraction");
   const result = await fetch(config.openaiBaseUrl.replace(/\/$/, "") + path, {
@@ -29,11 +43,26 @@ async function post(path: string, body: unknown) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.openaiApiKey}`,
     },
-    body: JSON.stringify(body),
+    body: encoded,
     signal: AbortSignal.timeout(90000),
   });
+  const details = await result.json().catch(() => null);
+  const format = body.response_format as
+    { json_schema?: { name?: string } } | undefined;
+  await recordProviderUsage({
+    attempt: attemptContext.getStore(),
+    operation:
+      format?.json_schema?.name ??
+      (path === "/embeddings" ? "embeddings" : "chat"),
+    requested: String(body.model),
+    returned: details?.model,
+    requestId: result.headers.get("x-request-id"),
+    input: details?.usage?.prompt_tokens,
+    output: details?.usage?.completion_tokens,
+    elapsed: Math.round(performance.now() - started),
+    status: result.status,
+  });
   if (!result.ok) {
-    const details = await result.json().catch(() => null);
     const param = details?.error?.param;
     console.error("Model request failed", {
       path,
@@ -59,7 +88,7 @@ async function post(path: string, body: unknown) {
       `Model provider returned HTTP ${result.status} for ${path}. Check the configured model and retry.`,
     );
   }
-  return result.json();
+  return details;
 }
 
 export async function chat(
