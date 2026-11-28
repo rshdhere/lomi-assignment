@@ -26,7 +26,12 @@ x-app: &app
 services:
   pdf-parser:
     image: lomi-app:local
-    command: [node, packages/services/src/parser-server.ts]
+    command:
+      [
+        node,
+        --experimental-transform-types,
+        packages/services/src/parser-server.ts,
+      ]
     network_mode: none
     user: "1000:1000"
     read_only: true
@@ -36,7 +41,7 @@ services:
     mem_limit: 192m
     cpus: 1
     restart: unless-stopped
-    tmpfs: [/tmp:size=8m, noexec, nosuid, nodev]
+    tmpfs: ["/tmp:size=8m,noexec,nosuid,nodev"]
     environment:
       MAX_FILE_BYTES: ${MAX_FILE_BYTES:-10485760}
     volumes: [parser-socket:/run/pdf-parser]
