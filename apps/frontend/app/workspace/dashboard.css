@@ -307,6 +307,7 @@
 @media (width < 48rem) {
   .workspace.dashboard-shell {
     display: block;
+    overflow-x: clip;
   }
   .dash-sidebar {
     position: relative;

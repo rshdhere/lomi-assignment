@@ -60,7 +60,15 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
   for (const field of await fields.all()) {
     const state = field.locator(".review-state");
     if ((await state.textContent()) === "Pending") {
-      await field.getByRole("button", { name: "Approve", exact: true }).click();
+      const label = await field.getByRole("heading").innerText();
+      const card = field.locator(
+        "xpath=ancestor::div[contains(@class, 'review-deck__card')]",
+      );
+      await page.getByRole("button", { name: `Show ${label}` }).click();
+      await expect(card).toHaveClass(/is-active/);
+      await field.getByRole("button", { name: "Approve", exact: true }).click({
+        force: true,
+      });
       await page.getByRole("button", { name: "Confirm approval" }).click();
       await expect(state).toHaveText("Approved");
     }
