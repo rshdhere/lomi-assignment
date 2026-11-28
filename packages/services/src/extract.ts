@@ -1,3 +1,4 @@
+import { extractionStage } from "@repo/common/telemetry";
 import { readFile } from "node:fs/promises";
 import { recordAttempt, type Claim, type DocumentType } from "@repo/drizzle";
 import { structured, embed } from "./model.ts";
@@ -53,7 +54,9 @@ export async function extractVersion(
     .join("\n");
   const transcript = JSON.stringify({ system: prompt, input: numbered });
   await recordAttempt(claim.token, transcript, null);
-  const raw = await structured(prompt, numbered, "document_extraction", schema);
+  const raw = await extractionStage("provider extraction", () =>
+    structured(prompt, numbered, "document_extraction", schema),
+  );
   await recordAttempt(claim.token, transcript, raw);
   const parsed = JSON.parse(raw);
   if (!Array.isArray(parsed.values) || !Array.isArray(parsed.sectionStartLines))
@@ -67,7 +70,7 @@ export async function extractVersion(
     return all;
   };
   const [embeddings, metadata] = await Promise.all([
-    vectors(),
+    extractionStage("embed sections", vectors),
     Promise.resolve().then(() =>
       sections.map((section, index) => ({
         section: index + 1,
