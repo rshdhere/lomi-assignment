@@ -12,9 +12,9 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
 }) => {
   // This test exercises the actual provider and stack. Work on a fresh document each run.
   await mkdir(screenshots, { recursive: true });
-  await page.goto("/");
+  await page.goto("/workspace");
   await page
-    .getByRole("button", { name: /Market report excerpt/ })
+    .getByRole("option", { name: /Market report excerpt/ })
     .first()
     .click();
   const gap = page.locator("article.field").filter({
@@ -28,7 +28,7 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "Upload PDFs", exact: true }).click();
+  await page.getByRole("button", { name: "Upload", exact: true }).click();
   const dialog = page.getByRole("dialog");
   const picker = dialog.locator('input[type="file"]');
   // Each newly opened dialog fetches its upload limits before accepting files.
@@ -58,6 +58,7 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
     const state = field.locator(".review-state");
     if ((await state.textContent()) === "Pending") {
       await field.getByRole("button", { name: "Approve", exact: true }).click();
+      await page.getByRole("button", { name: "Confirm approval" }).click();
       await expect(state).toHaveText("Approved");
     }
   }
@@ -106,15 +107,15 @@ test("browse the mobile library and open the cited document version", async ({
   const invoiceId = "doc-invoice-001";
   const title = page.locator("#document-detail h2.document-title");
   const library = page.getByRole("navigation", { name: "Document library" });
-  const actions = page.getByRole("button", { name: "Actions", exact: true });
+  const uploadAction = page.getByRole("button", { name: "Upload", exact: true });
   const ask = page.getByRole("button", { name: "Ask documents", exact: true });
   const browse = page.getByRole("button", { name: "Browse", exact: true });
 
   await mkdir(screenshots, { recursive: true });
-  await page.goto("/");
+  await page.goto("/workspace");
   const search = page.getByRole("searchbox", { name: "Find a document" });
   await search.fill("excerpt");
-  await library.getByRole("button", { name: new RegExp(report) }).click();
+  await library.getByRole("option", { name: new RegExp(report) }).click();
   await expect(title).toHaveText(report);
   await expect(page.getByRole("heading", { name: "Market area" })).toBeVisible({
     timeout: 120_000,
@@ -128,41 +129,25 @@ test("browse the mobile library and open the cited document version", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(browse).toBeVisible();
   await expect(library).toBeHidden();
-  await expect(actions).toHaveAttribute("aria-expanded", "false");
-  await expect(ask).toBeHidden();
+  await expect(ask).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
   await page.screenshot({ path: screenshots + "workspace-mobile.png" });
 
-  await actions.click();
-  await expect(actions).toHaveAttribute("aria-expanded", "true");
-  await page.keyboard.press("Tab");
-  await expect(ask).toBeFocused();
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await expect(browse).toBeFocused();
-  await expect(actions).toHaveAttribute("aria-expanded", "false");
-
-  await actions.click();
-  await page.keyboard.press("Escape");
-  await expect(ask).toBeHidden();
-  await expect(actions).toBeFocused();
-
-  await actions.click();
-  await page.getByRole("button", { name: "Upload PDFs", exact: true }).click();
+  await uploadAction.click();
   const upload = page.getByRole("dialog", { name: "Upload documents" });
   await expect(
     upload.getByRole("button", { name: "Close dialog" }),
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(upload).toBeHidden();
-  await expect(actions).toBeFocused();
+  await expect(uploadAction).toBeFocused();
 
   await browse.click();
   await search.fill("1200 Harbor Street");
-  await expect(library.getByRole("button")).toHaveCount(1);
-  await library.getByRole("button", { name: new RegExp(lease) }).click();
+  await expect(library.getByRole("option")).toHaveCount(1);
+  await library.getByRole("option", { name: new RegExp(lease) }).click();
   await expect(title).toHaveText(lease);
   await expect(browse).toHaveAttribute("aria-expanded", "false");
 
@@ -190,16 +175,18 @@ test("browse the mobile library and open the cited document version", async ({
       },
     }),
   );
-  await actions.click();
   await ask.click();
   const dialog = page.getByRole("dialog", { name: "Ask your documents" });
   await expect(dialog.getByLabel("Search in")).toHaveValue("");
-  await dialog.getByLabel("Question", { exact: true }).fill(question);
+  const composer = dialog.getByLabel("Question", { exact: true });
+  await composer.fill(question);
+  await composer.press("Shift+Enter");
+  await expect(composer).toHaveValue(question + "\n");
   const [request] = await Promise.all([
     page.waitForRequest(
       (r) => r.method() === "POST" && new URL(r.url()).pathname === "/query",
     ),
-    dialog.getByRole("button", { name: "Ask question" }).click(),
+    composer.press("Enter"),
   ]);
   expect(request.postDataJSON()).toEqual({ question });
   await expect(

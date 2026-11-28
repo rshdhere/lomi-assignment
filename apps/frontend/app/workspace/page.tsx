@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useEffect, useRef, useState } from "react";
 import type {
   DocumentDetail,
   DocumentSummary,
   Progress,
 } from "@repo/types/reviewer";
-import { api, errorMessage, post, typeLabels } from "./client";
-import { Ask } from "./ask";
-import { ReviewField } from "./review";
-import { Upload } from "./upload";
-import { WorkspaceIcon } from "./workspace-icon";
+import { apiText, errorMessage, post, typeLabels } from "../client";
+import AnimatedList from "../ui/animated-list/AnimatedList";
+import { Ask } from "../ask";
+import { ReviewField } from "../review";
+import { Upload } from "../upload";
+import { WorkspaceIcon } from "../workspace-icon";
 
 const statusLabels = {
   queued: "Queued",
@@ -19,14 +20,55 @@ const statusLabels = {
   failed: "Failed",
 };
 
+function reviewedCount(progress: Progress) {
+  return progress.approved + progress.corrected + progress.carriedOver;
+}
+
+function reviewPercentage(progress: Progress) {
+  const reviewed = reviewedCount(progress);
+  const total = reviewed + progress.pending;
+  return total ? `${(reviewed / total) * 100}%` : "0%";
+}
+
 function progressText(progress: Progress) {
-  const reviewed =
-    progress.approved + progress.corrected + progress.carriedOver;
+  const reviewed = reviewedCount(progress);
   return `${reviewed} of ${reviewed + progress.pending} reviewed`;
 }
 
+function renderDocument(item: DocumentSummary) {
+  return (
+    <>
+      <strong>{item.title}</strong>
+      <span className="file-meta">
+        <span>
+          <WorkspaceIcon name="document" />
+          {typeLabels[item.type]}
+        </span>
+        <span>v{item.version}</span>
+      </span>
+      <span className="library-progress">
+        <span className={`state ${item.status}`}>
+          {statusLabels[item.status]}
+        </span>
+        {item.status === "extracted" && (
+          <small>{progressText(item.progress)}</small>
+        )}
+      </span>
+      {item.status === "extracted" && (
+        <span className="library-meter" aria-hidden="true">
+          <span style={{ width: reviewPercentage(item.progress) }} />
+        </span>
+      )}
+    </>
+  );
+}
+
 // A fresh request is scheduled after the previous one settles so slow responses cannot overlap.
-function useResource<T>(path: string | null, change: number) {
+function useResource<T>(
+  path: string | null,
+  change: number,
+  retainPrevious = false,
+) {
   const [result, setResult] = useState<{
     path: string;
     data?: T;
@@ -35,12 +77,18 @@ function useResource<T>(path: string | null, change: number) {
   useEffect(() => {
     if (!path) return;
     const controller = new AbortController();
+    let previousBody: string | undefined;
     let timer: ReturnType<typeof setTimeout>;
     async function load() {
       try {
-        const data = await api<T>(path!, { signal: controller.signal });
-        if (!controller.signal.aborted) setResult({ path: path!, data });
+        const body = await apiText(path!, { signal: controller.signal });
+        if (!controller.signal.aborted && body !== previousBody) {
+          const data: T = JSON.parse(body);
+          previousBody = body;
+          setResult({ path: path!, data });
+        }
       } catch (error) {
+        previousBody = undefined;
         if (!controller.signal.aborted)
           setResult((old) => ({
             ...(old?.path === path ? old : {}),
@@ -58,7 +106,9 @@ function useResource<T>(path: string | null, change: number) {
       clearTimeout(timer);
     };
   }, [path, change]);
-  return result?.path === path ? result : undefined;
+  return result?.path === path || (retainPrevious && path && result?.data)
+    ? result
+    : undefined;
 }
 
 function Detail({
@@ -67,6 +117,7 @@ function Detail({
   version,
   setVersion,
   upload,
+  ask,
   refresh,
 }: {
   doc: DocumentDetail;
@@ -74,6 +125,7 @@ function Detail({
   version: number | null;
   setVersion: (n: number | null) => void;
   upload: () => void;
+  ask: () => void;
   refresh: () => void;
 }) {
   const [onlyPending, setOnlyPending] = useState(false);
@@ -96,7 +148,7 @@ function Detail({
     }
   }
   return (
-    <>
+    <div className="document-view">
       <header className="document-summary">
         <div className="summary-status">
           <span className="doc-kind">
@@ -131,13 +183,10 @@ function Detail({
                 ))}
             </select>
           </label>
+          <button type="button" className="ask-text" onClick={ask}>Ask documents</button>
           <button
             onClick={upload}
-            disabled={
-              ["queued", "extracting"].includes(
-                doc.extractionStatus ?? doc.status,
-              ) || !current
-            }
+            disabled={["queued", "extracting"].includes(doc.extractionStatus ?? doc.status) || !current}
           >
             <WorkspaceIcon name="upload" />
             Upload revision
@@ -213,7 +262,7 @@ function Detail({
           )}
         </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -226,9 +275,6 @@ export default function Home() {
   const [change, setChange] = useState(0);
   const [filter, setFilter] = useState("");
   const [libraryOpen, setLibraryOpen] = useState(false);
-  const [actionsOpen, setActionsOpen] = useState(false);
-  const actions = useRef<HTMLDivElement>(null);
-  const actionsToggle = useRef<HTMLButtonElement>(null);
   const detailRegion = useRef<HTMLElement>(null);
   const list = useResource<{ documents: DocumentSummary[] }>(
     "/documents",
@@ -236,17 +282,19 @@ export default function Home() {
   );
   const docs = list?.data?.documents;
   const id = selection ?? docs?.[0]?.id;
-  const detail = useResource<DocumentDetail>(
-    id
-      ? `/documents/${encodeURIComponent(id)}${version ? `?version=${version}` : ""}`
-      : null,
-    change,
-  );
+  const detailPath = id
+    ? `/documents/${encodeURIComponent(id)}${version ? `?version=${version}` : ""}`
+    : null;
+  const detail = useResource<DocumentDetail>(detailPath, change, true);
+  const switching = !!detail && detail.path !== detailPath;
   const doc = detail?.data;
   const refresh = () => setChange((n) => n + 1);
   function choose(id: string, n: number | null = null) {
     setSelection(id);
     setVersion(n);
+  }
+  function openAsk() {
+    setModal("ask");
   }
   function uploaded(id: string) {
     setModal(null);
@@ -261,36 +309,26 @@ export default function Home() {
     );
   }
 
-  useEffect(() => {
-    if (!actionsOpen) return;
-    function dismissOutside(event: PointerEvent) {
-      if (
-        event.target instanceof Node &&
-        !actions.current?.contains(event.target)
-      )
-        setActionsOpen(false);
-    }
-    function escape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setActionsOpen(false);
-        actionsToggle.current?.focus();
-      }
-    }
-    document.addEventListener("pointerdown", dismissOutside);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", dismissOutside);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [actionsOpen]);
-  function openAction(which: "ask" | "upload") {
-    if (actionsOpen) actionsToggle.current?.focus();
-    setActionsOpen(false);
-    setModal(which);
-  }
   const query = filter.trim().toLowerCase();
-  const visibleDocs = docs?.filter((item) =>
-    `${item.title} ${typeLabels[item.type]}`.toLowerCase().includes(query),
+  const visibleDocs = useMemo(
+    () =>
+      query
+        ? docs?.filter((item) =>
+            `${item.title} ${typeLabels[item.type]}`
+              .toLowerCase()
+              .includes(query),
+          )
+        : docs,
+    [docs, query],
+  );
+  const selectDocument = useCallback(
+    (item: DocumentSummary) => {
+      setSelection(item.id);
+      setVersion(null);
+      if (libraryOpen) detailRegion.current?.focus({ preventScroll: true });
+      setLibraryOpen(false);
+    },
+    [libraryOpen],
   );
   return (
     <>
@@ -299,79 +337,26 @@ export default function Home() {
       </a>
       <header className="mast">
         <div className="mast-inner">
-          <div className="brand">
-            <span className="brand-mark" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-            Lomi Labs
-          </div>
-          <div
-            className="action-nav"
-            ref={actions}
-            onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget))
-                setActionsOpen(false);
-            }}
-          >
+          <span className="mast-logo" role="img" aria-label="Lomi Labs" />
+          <nav className="mast-actions" aria-label="Workspace actions">
             <button
               type="button"
-              className="actions-toggle"
-              aria-controls="workspace-actions"
-              aria-expanded={actionsOpen}
-              ref={actionsToggle}
-              onClick={() => setActionsOpen(!actionsOpen)}
+              className="primary upload-action"
+              onClick={() => setModal("upload")}
             >
-              <WorkspaceIcon name={actionsOpen ? "close" : "menu"} />
-              Actions
+              Upload
+              <span className="upload-disc">
+                <WorkspaceIcon name="uploadFile" />
+              </span>
             </button>
-            <div
-              id="workspace-actions"
-              className={`mast-actions${actionsOpen ? " open" : ""}`}
-            >
-              <button onClick={() => openAction("ask")}>
-                <WorkspaceIcon name="ask" />
-                Ask documents
-              </button>
-              <button
-                className="primary upload-action"
-                onClick={() => openAction("upload")}
-              >
-                Upload PDFs
-                <span className="mint-disc">
-                  <WorkspaceIcon name="plus" />
-                </span>
-              </button>
-            </div>
-          </div>
+          </nav>
         </div>
       </header>
-      <main className="workspace" id="workspace">
-        <header className="workspace-intro">
-          <div className="intro-copy">
-            <h1>Review workspace</h1>
-            <p>
-              Check extracted values against their source passages. Approve the
-              evidence or record a correction.
-            </p>
-          </div>
-          <div className="folio-art" aria-hidden="true">
-            <span className="contour contour-outer" />
-            <span className="contour contour-middle" />
-            <span className="contour contour-inner" />
-            <div className="folio">
-              <i className="sheet sheet-back" />
-              <i className="sheet sheet-middle" />
-              <i className="sheet sheet-front">
-                <b />
-                <b />
-                <b />
-                <b />
-              </i>
-            </div>
-          </div>
-        </header>
+      <main
+        className="workspace"
+        id="workspace"
+        aria-label="Document review workspace"
+      >
         <div className="workspace-grid">
           <aside className={`library${libraryOpen ? " expanded" : ""}`}>
             <div className="library-heading">
@@ -422,36 +407,26 @@ export default function Home() {
                 </label>
               )}
               <nav aria-label="Document library">
-                {visibleDocs?.map((item) => (
-                  <button
-                    key={item.id}
-                    className={`document-link ${item.id === id ? "selected" : ""}`}
-                    aria-current={item.id === id ? "page" : undefined}
-                    onClick={() => {
-                      choose(item.id);
-                      if (libraryOpen)
-                        detailRegion.current?.focus({ preventScroll: true });
-                      setLibraryOpen(false);
-                    }}
-                  >
-                    <span className="file-meta">
-                      <span>
-                        <WorkspaceIcon name="document" />
-                        {typeLabels[item.type]}
-                      </span>
-                      <span>v{item.version}</span>
-                    </span>
-                    <strong>{item.title}</strong>
-                    <span className="library-progress">
-                      <span className={`state ${item.status}`}>
-                        {statusLabels[item.status]}
-                      </span>
-                      {item.status === "extracted" && (
-                        <small>{progressText(item.progress)}</small>
-                      )}
-                    </span>
-                  </button>
-                ))}
+                {visibleDocs && visibleDocs.length > 0 && (
+                  <AnimatedList
+                    items={visibleDocs}
+                    selectedIndex={visibleDocs.findIndex(
+                      (item) => item.id === id,
+                    )}
+                    theme="light"
+                    animation="pop"
+                    animateOnce
+                    frame={false}
+                    selectOnHover={false}
+                    accentColor="#4189d6"
+                    width="100%"
+                    maxHeight="min(65svh, 42rem)"
+                    fadeSize={16}
+                    itemClassName="document-link"
+                    onItemSelect={selectDocument}
+                    renderItem={renderDocument}
+                  />
+                )}
               </nav>
               {docs?.length && visibleDocs?.length === 0 ? (
                 <p className="library-message" role="status">
@@ -467,17 +442,20 @@ export default function Home() {
             tabIndex={-1}
             aria-label="Document review"
           >
-            {detail?.error && connectionError(detail.error)}
+            {!switching && detail?.error && connectionError(detail.error)}
             {doc ? (
-              <Detail
-                key={`${id}/${doc.version}`}
-                doc={doc}
-                latest={Math.max(doc.version, ...doc.versions)}
-                version={version}
-                setVersion={setVersion}
-                upload={() => setModal("revision")}
-                refresh={refresh}
-              />
+              <div inert={switching} aria-busy={switching}>
+                <Detail
+                  key={`${doc.id}/${doc.version}`}
+                  doc={doc}
+                  latest={Math.max(doc.version, ...doc.versions)}
+                  version={version}
+                  setVersion={setVersion}
+                  upload={() => setModal("revision")}
+                  ask={openAsk}
+                  refresh={refresh}
+                />
+              </div>
             ) : !detail?.error ? (
               <div className="empty">
                 <span className="empty-icon" aria-hidden="true">
@@ -524,17 +502,16 @@ export default function Home() {
           done={uploaded}
         />
       )}
-      {modal === "ask" && (
-        <Ask
-          close={() => setModal(null)}
-          open={(sourceId, n) => {
-            setModal(null);
-            choose(sourceId, n);
-          }}
-          documentId={id}
-          title={doc?.title}
-        />
-      )}
+      <Ask
+        visible={modal === "ask"}
+        close={() => setModal(null)}
+        open={(sourceId, n) => {
+          setModal(null);
+          choose(sourceId, n);
+        }}
+        documentId={switching ? undefined : id}
+        title={switching ? undefined : doc?.title}
+      />
     </>
   );
 }

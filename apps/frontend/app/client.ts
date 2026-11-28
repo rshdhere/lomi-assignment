@@ -21,10 +21,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(
+export async function apiText(
   path: string,
   options: RequestInit = {},
-): Promise<T> {
+): Promise<string> {
   const origin = process.env.NEXT_PUBLIC_API_ORIGIN || "http://localhost:4000";
   const response = await fetch(`${origin}${path}`, {
     cache: "no-store",
@@ -42,8 +42,14 @@ export async function api<T>(
       Array.isArray(data.needsType) ? data.needsType : [],
     );
   }
-  if (response.status === 204) return undefined as T;
-  const body = await response.text();
+  return response.text();
+}
+
+export async function api<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const body = await apiText(path, options);
   return body ? JSON.parse(body) : (undefined as T);
 }
 

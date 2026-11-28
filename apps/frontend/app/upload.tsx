@@ -1,6 +1,9 @@
+import UploadFolder from "./ui/folder/UploadFolder";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { DocumentType, UploadBatch } from "@repo/types/reviewer";
 import { api, ApiError, errorMessage, post, typeLabels } from "./client";
+import { Button } from "./ui/button";
+import { WorkspaceIcon } from "./workspace-icon";
 import { Modal } from "./modal";
 
 interface FileEntry {
@@ -25,10 +28,11 @@ export function Upload({
   done: (id: string) => void;
 }) {
   const [baseVersion] = useState(expectedVersion);
+  const manifestKey = useRef<{ body: string; key: string } | null>(null);
   const [limits, setLimits] = useState<Limits>();
   const [entries, setEntries] = useState<FileEntry[]>([]);
-  const manifestKey = useRef<{ body: string; key: string } | null>(null);
   const [batch, setBatch] = useState<UploadBatch>();
+  const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [needsType, setNeedsType] = useState<string[]>([]);
@@ -52,6 +56,10 @@ export function Upload({
     setNeedsType([]);
     setMessage("");
     if (!limits || !files.length) return;
+    if (documentId && files.length !== 1) {
+      setMessage("Choose one PDF for the revised version.");
+      return;
+    }
     if (files.length > limits.maxBatchFiles) {
       setMessage(`Select up to ${limits.maxBatchFiles} PDFs per upload.`);
       return;
@@ -143,8 +151,10 @@ export function Upload({
       );
       done(result.documents[0]!.id);
     } catch (error) {
+      if (error instanceof ApiError && error.needsType.length) {
+        setNeedsType(error.needsType);
+      }
       setMessage(errorMessage(error));
-      if (error instanceof ApiError) setNeedsType(error.needsType);
     } finally {
       setBusy(false);
       setStep("");
@@ -161,42 +171,71 @@ export function Upload({
         <p className="sheet-description">
           {documentId
             ? "Earlier versions and their reviews stay available."
-            : "Send a batch of PDFs and review each document as extraction finishes."}
+            : "Upload PDFs, then review each result."}
         </p>
-        <label className="sheet-picker">
-          <span aria-hidden="true" className="sheet-file-mark" />
-          <span className="sheet-picker-title" id="upload-picker-label">
-            {documentId ? "Choose a revised PDF" : "Choose PDF files"}
-          </span>
-          <input
-            type="file"
-            accept="application/pdf,.pdf"
-            aria-labelledby="upload-picker-label"
-            aria-describedby="upload-picker-limits"
-            multiple={!documentId}
-            disabled={busy || !limits}
-            onChange={(e) => {
-              void select(Array.from(e.currentTarget.files ?? []));
-              e.currentTarget.value = "";
-            }}
-          />
-          <small id="upload-picker-limits">
-            {limits ? (
-              <>
-                Up to{" "}
-                {Math.round((limits.maxFileBytes / 1024 / 1024) * 10) / 10} MiB
-                per file{!documentId && `, ${limits.maxBatchFiles} per batch`}
-              </>
-            ) : message ? (
-              "Upload limits unavailable"
-            ) : (
-              "Checking upload limits…"
-            )}
-          </small>
-          <span className="picker-arrow" aria-hidden="true">
-            ↑
-          </span>
-        </label>
+        <div
+          className="upload-drop-zone"
+          onDragOver={(event) => {
+            if (!event.dataTransfer.types.includes("Files")) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = busy || !limits ? "none" : "copy";
+            setDragging(!busy && !!limits);
+          }}
+          onDragLeave={(event) => {
+            if (!(
+              event.relatedTarget instanceof Node &&
+              event.currentTarget.contains(event.relatedTarget)
+            )) {
+              setDragging(false);
+            }
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            if (!busy && limits)
+              void select(Array.from(event.dataTransfer.files));
+          }}
+        >
+          <label className={`sheet-picker${dragging ? " dragging" : ""}`}>
+            <span className="sheet-picker-title" id="upload-picker-label">
+              {dragging
+                ? "Drop PDFs here"
+                : documentId
+                  ? "Choose a revised PDF"
+                  : "Choose PDF files"}
+            </span>
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              aria-labelledby="upload-picker-label"
+              aria-describedby="upload-picker-limits"
+              multiple={!documentId}
+              disabled={busy || !limits}
+              onChange={(e) => {
+                void select(Array.from(e.currentTarget.files ?? []));
+                e.currentTarget.value = "";
+              }}
+            />
+            <small id="upload-picker-limits">
+              {limits ? (
+                <>
+                  Up to{" "}
+                  {Math.round((limits.maxFileBytes / 1024 / 1024) * 10) / 10}{" "}
+                  MiB per file
+                  {!documentId && `, ${limits.maxBatchFiles} per batch`}
+                </>
+              ) : message ? (
+                "Upload limits unavailable"
+              ) : (
+                "Checking upload limits…"
+              )}
+            </small>
+            <span className="picker-arrow" aria-hidden="true">
+              ↑
+            </span>
+          </label>
+          <UploadFolder dragging={dragging} />
+        </div>
         {!limits && message && (
           <button
             type="button"
@@ -265,16 +304,22 @@ export function Upload({
           </p>
         )}
         <footer className="sheet-actions">
-          <button type="button" disabled={busy} onClick={close}>
+          <Button
+            variant="outline"
+            type="button"
+            disabled={busy}
+            onClick={close}
+          >
             Cancel
-          </button>
-          <button className="primary" disabled={busy || !entries.length}>
+          </Button>
+          <Button className="upload-action" variant="default" disabled={busy || !entries.length}>
             {documentId
               ? "Upload revision"
               : batch
                 ? "Continue batch"
                 : "Upload PDFs"}
-          </button>
+            <span className="upload-disc"><WorkspaceIcon name="uploadFile" /></span>
+          </Button>
         </footer>
       </form>
     </Modal>

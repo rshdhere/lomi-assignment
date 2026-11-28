@@ -11,7 +11,7 @@
   margin: 0;
   font-family: var(--display);
   font-size: clamp(2rem, 3vw, 2.65rem);
-  font-weight: 300;
+  font-weight: 650;
   line-height: 1.05;
   letter-spacing: -0.045em;
 }
@@ -234,9 +234,7 @@
 .field .correction {
   display: grid;
   gap: 0.8rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--line);
+  margin: 0;
 }
 
 .field .correction .control {
