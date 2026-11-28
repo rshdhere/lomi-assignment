@@ -98,6 +98,21 @@ test(
             : { action: "approve" },
         );
       }
+      const target = v1.values[0]!;
+      const decisions = await Promise.allSettled(
+        [1, 2].map(() =>
+          reviewValue(target.id, {
+            action: target.field === "number" ? "correct" : "approve",
+            value: "001",
+            expectedRevision: 1,
+          }),
+        ),
+      );
+      assert.equal(decisions.filter((d) => d.status === "fulfilled").length, 1);
+      const history = await db.execute(
+        sql`select 1 from review_history where value_id=${target.id}`,
+      );
+      assert.equal(history.rowCount, 2);
       const lexical = await searchChunks(
         "lexical",
         "invoice",

@@ -452,6 +452,9 @@ components:
     ExtractedField:
       type: object
       properties:
+        reviewRevision:
+          type: integer
+          minimum: 0
         id:
           type: string
           format: uuid
@@ -577,6 +580,10 @@ components:
       oneOf:
         - type: object
           properties:
+            expectedRevision:
+              type: integer
+              minimum: 0
+              description: Reject stale submissions with HTTP 409.
             action:
               const: approve
           required:
@@ -584,6 +591,10 @@ components:
           additionalProperties: false
         - type: object
           properties:
+            expectedRevision:
+              type: integer
+              minimum: 0
+              description: Reject stale submissions with HTTP 409.
             action:
               const: correct
             value:

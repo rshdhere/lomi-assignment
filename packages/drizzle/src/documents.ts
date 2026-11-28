@@ -6,6 +6,7 @@ import { db } from "./client.ts";
 export type DocumentType = "invoice" | "lease" | "market_report";
 export type Status = "queued" | "extracting" | "extracted" | "failed";
 export type Review = {
+  expectedRevision?: number;
   action: "approve" | "correct";
   value?: string | null;
   note?: string | null;
@@ -163,6 +164,7 @@ export async function getDocument(id: string, version?: number) {
     quote: string | null;
     reason: string | null;
     review: Review | null;
+    reviewRevision: number;
     carriedOver: boolean;
     previous: {
       value: string | null;
@@ -171,7 +173,7 @@ export async function getDocument(id: string, version?: number) {
     } | null;
   }>(sql`select e.value_id as id,e.field,e.value,e.quote,e.gap_reason as reason,
     case when r.action is not null then json_build_object('action',r.action,'value',r.correction,'note',r.note) end as review,
-    e.carried_over as "carriedOver",
+    coalesce(r.revision,0) as "reviewRevision",e.carried_over as "carriedOver",
     case when p.value_id is not null then json_build_object('value',p.value,'quote',p.quote,'review',
       case when pr.action is not null then json_build_object('action',pr.action,'value',pr.correction,'note',pr.note) end) end as previous
     from extracted_values e left join reviews r on r.value_id=e.value_id
@@ -203,6 +205,16 @@ export async function reviewValue(id: string, review: Review) {
     );
     if (newer.rowCount)
       throw new ApiError(409, "Historical reviews are read-only");
+    if (review.expectedRevision !== undefined) {
+      const current = await tx.execute<{ revision: number }>(
+        sql`select revision from reviews where value_id=${id}`,
+      );
+      if ((current.rows[0]?.revision ?? 0) !== review.expectedRevision)
+        throw new ApiError(
+          409,
+          "Review changed in another session. Reopen the field to review its latest decision.",
+        );
+    }
     if (review.action === "correct" && !review.value?.trim())
       throw new ApiError(400, "A correction needs a value");
     await tx.execute(sql`insert into reviews(value_id,action,correction,note)
