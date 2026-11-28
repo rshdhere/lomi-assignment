@@ -3,11 +3,13 @@ import { z } from "zod";
 export const documentType = z.enum(["invoice", "lease", "market_report"]);
 export const identifier = z.string().regex(/^[\w-]{1,128}$/);
 export const versionNumber = z.coerce.number().int().min(1).max(2147483647);
+const expectedRevision = z.number().int().nonnegative().optional();
 export const review = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("approve") }).strict(),
+  z.object({ action: z.literal("approve"), expectedRevision }).strict(),
   z
     .object({
       action: z.literal("correct"),
+      expectedRevision,
       value: z.string().trim().min(1).max(4000),
       note: z.string().trim().max(2000).optional(),
     })
