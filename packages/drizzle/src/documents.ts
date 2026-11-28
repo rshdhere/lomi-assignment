@@ -142,6 +142,23 @@ export async function listDocuments() {
   ).rows;
 }
 
+export async function listDocumentPage(limit: number, cursor?: string) {
+  const { rows } = await db.execute<Summary>(sql`
+    with page as materialized (
+      select doc_id,title from documents
+      ${cursor ? sql`where doc_id > ${cursor}` : sql``}
+      order by doc_id limit ${limit + 1}
+    )
+    ${summary} from page d
+    join lateral (select * from document_versions where doc_id=d.doc_id order by version desc limit 1) v on true
+    order by d.doc_id`);
+  const documents = rows.slice(0, limit);
+  return {
+    documents,
+    nextCursor: rows.length > limit ? documents[limit - 1]!.id : null,
+  };
+}
+
 export async function getDocument(
   id: string,
   version?: number,

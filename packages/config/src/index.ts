@@ -6,6 +6,11 @@ function positiveInteger(name: string, fallback: number) {
 }
 
 export const config = {
+  databasePoolMax: positiveInteger("DATABASE_POOL_MAX", 10),
+  databaseAcquireTimeoutMs: positiveInteger(
+    "DATABASE_ACQUIRE_TIMEOUT_MS",
+    10000,
+  ),
   databaseUrl:
     process.env.DATABASE_URL ??
     "postgres://postgres:postgres@localhost:5432/lomi",
