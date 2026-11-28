@@ -3,8 +3,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { DocumentType, UploadBatch } from "@repo/types/reviewer";
 import { api, ApiError, errorMessage, post, typeLabels } from "./client";
 import { Button } from "./ui/button";
-import { WorkspaceIcon } from "./workspace-icon";
 import { Modal } from "./modal";
+import { IconPlus } from "@tabler/icons-react";
 
 interface FileEntry {
   file: File;
@@ -33,6 +33,7 @@ export function Upload({
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [batch, setBatch] = useState<UploadBatch>();
   const [dragging, setDragging] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [needsType, setNeedsType] = useState<string[]>([]);
@@ -164,10 +165,12 @@ export function Upload({
   return (
     <Modal
       title={documentId ? "Upload a new version" : "Upload documents"}
-      close={close}
-      busy={busy}
+      close={() => setClosing(true)}
+      closing={closing}
+      onExit={close}
+      busy={busy || closing}
     >
-      <form className="sheet-form" onSubmit={submit}>
+      <form inert={closing} className="sheet-form" onSubmit={submit}>
         <p className="sheet-description">
           {documentId
             ? "Earlier versions and their reviews stay available."
@@ -308,17 +311,26 @@ export function Upload({
             variant="outline"
             type="button"
             disabled={busy}
-            onClick={close}
+            onClick={() => setClosing(true)}
           >
             Cancel
           </Button>
-          <Button className="upload-action" variant="default" disabled={busy || !entries.length}>
+          <Button
+            className="upload-action"
+            variant="default"
+            disabled={busy || !entries.length}
+          >
             {documentId
               ? "Upload revision"
               : batch
                 ? "Continue batch"
                 : "Upload PDFs"}
-            <span className="upload-disc"><WorkspaceIcon name="uploadFile" /></span>
+            <IconPlus
+              className="upload-plus"
+              size={17}
+              stroke={2.25}
+              aria-hidden="true"
+            />
           </Button>
         </footer>
       </form>

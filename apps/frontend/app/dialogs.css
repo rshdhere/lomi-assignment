@@ -15,6 +15,57 @@
   background: rgb(15 26 23 / 44%);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .workspace-dialog[open]:has(.upload-drop-zone) {
+    animation: upload-dialog-enter 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .workspace-dialog[open]:has(.upload-drop-zone)::backdrop {
+    animation: upload-backdrop-enter 180ms ease-out;
+  }
+
+  .workspace-dialog[open][data-closing]:has(.upload-drop-zone) {
+    animation: upload-dialog-exit 160ms ease-in both;
+  }
+
+  .workspace-dialog[open][data-closing]:has(.upload-drop-zone)::backdrop {
+    animation: upload-backdrop-exit 160ms ease-in both;
+  }
+
+  @keyframes upload-dialog-exit {
+    to {
+      opacity: 0;
+      transform: translateY(10px) scale(0.985);
+    }
+  }
+
+  @keyframes upload-backdrop-exit {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes upload-dialog-enter {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes upload-backdrop-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
 .sheet-heading,
 .sheet-actions {
   display: flex;
@@ -472,8 +523,12 @@
     animation: ask-panel-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   @keyframes ask-panel-in {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
 }
 
@@ -509,7 +564,9 @@
   }
 }
 @keyframes generation-pulse {
-  to { opacity: 0.62; }
+  to {
+    opacity: 0.62;
+  }
 }
 
 .upload-drop-zone {

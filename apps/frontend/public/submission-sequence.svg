@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 4 355 214">
+<style>
+.plate { color: #e5e5e5; }
+@media (prefers-reduced-motion: no-preference) {
+  .plate { animation: plate-land 160ms ease-out both; }
+  .plate.extract { animation-delay: 1.6s; }
+  .plate.review { animation-delay: 3.05s; }
+
+  .mascot {
+    offset-path: path("M104 46 Q78 5 110 100 Q91 62 119 155 Q173 51 239 104");
+    offset-anchor: 0 0;
+    offset-rotate: 0deg;
+    transform: none;
+    animation: route 5s both;
+  }
+  .pose {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: balance 5s both;
+  }
+}
+@keyframes plate-land { from { color: #fafafa; } to { color: #e5e5e5; } }
+@keyframes route {
+  0%, 12% { offset-distance: 0%; animation-timing-function: cubic-bezier(.34,.03,.72,.95); }
+  32%, 42% { offset-distance: 26.5441%; animation-timing-function: cubic-bezier(.34,.03,.72,.95); }
+  61%, 70% { offset-distance: 51.8116%; animation-timing-function: cubic-bezier(.32,.04,.65,.98); }
+  94%, 100% { offset-distance: 100%; }
+}
+@keyframes balance {
+  0%, 7%, 37%, 65%, 100% { transform: translateY(0) rotate(0); }
+  12%, 42%, 70% { transform: translateY(2px) rotate(-4deg); }
+  21%, 52%, 80% { transform: translateY(-1px) rotate(5deg); }
+  32%, 61%, 94% { transform: translateY(2px) rotate(2deg); }
+  35%, 64%, 97% { transform: translateY(-1px) rotate(-1deg); }
+}
+</style>
+<defs>
+ <pattern id="grid" width="62" height="36" patternUnits="userSpaceOnUse"><path d="m0 0 62 36m0-36L0 36" fill="none" stroke="#84a8c6" stroke-opacity=".25" stroke-dasharray="2 5"/></pattern>
+ <g id="tile" stroke="#cccccc" stroke-linejoin="round"><path d="m0 19 31-18 64 37-31 18z" fill="currentColor"/><path d="m0 19 64 37 31-18v4L64 60 0 23z" fill="#dfdfdf"/></g>
+</defs>
+<g class="scene">
+ <rect x="51" y="7" width="294" height="208" fill="url(#grid)"/>
+ <g stroke="#809fb9" stroke-dasharray="3 4" fill="none"><path d="M129 61 255 124 M129 115 255 124 M129 168 255 124"/><path d="m195 125 59-35 59 35-59 35z"/></g>
+ <use class="plate upload" href="#tile" x="77" y="32"/><use class="plate extract" href="#tile" x="77" y="86"/><use class="plate review" href="#tile" x="77" y="140"/>
+ <g class="solid"><path d="m195 125 59-35 59 35-59 35z" fill="#8eb5d8"/><path d="m195 125 59 35v13l-59-35z" fill="#688fb1"/><path d="m254 160 59-35v13l-59 35z" fill="#54799d"/>
+ <g fill="#fff" stroke="#86a0b6"><rect x="192" y="122" width="7" height="7"/><rect x="251" y="87" width="7" height="7"/><rect x="310" y="122" width="7" height="7"/><rect x="251" y="156" width="7" height="7"/></g></g>
+ <g fill="#516e88" font-family="ui-monospace,monospace" font-size="12"><text x="66" y="56" text-anchor="end">upload</text><text x="66" y="110" text-anchor="end">extract</text><text x="66" y="165" text-anchor="end">review</text><text x="263" y="187">complete</text></g>
+ <g class="mascot" transform="translate(239 104)"><g class="pose"><g transform="scale(2.5)" shape-rendering="geometricPrecision">
+  <rect x="0" y="1" width="2" height="2" fill="#3979bc" />
+  <rect x="11" y="1" width="2" height="2" fill="#3979bc" />
+  <rect x="3.5" y="6.5" width="1.4" height="3.1" fill="#3979bc" />
+  <rect x="6" y="6.5" width="1.4" height="3.1" fill="#3979bc" />
+  <rect x="8.5" y="6.5" width="1.4" height="3.1" fill="#3979bc" />
+  <rect x="2" y="2.5" width="9" height="0.8" fill="#7eafe3" />
+  <rect x="2" y="3.3" width="9" height="4.2" fill="#4189d6" />
+  <rect x="3.8" y="4.2" width="1.6" height="1.6" fill="#1A1A1A" />
+  <rect x="4" y="4.4" width="0.5" height="0.5" fill="#FFFFFF" />
+  <rect x="8.2" y="4.2" width="1.6" height="1.6" fill="#1A1A1A" />
+  <rect x="8.4" y="4.4" width="0.5" height="0.5" fill="#FFFFFF" />
+</g></g></g></g></svg>
