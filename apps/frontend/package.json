@@ -12,19 +12,21 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@hugeicons/core-free-icons": "^4.4.0",
+    "@hugeicons/react": "^1.1.10",
+    "@repo/types": "workspace:*",
     "next": "16.3.8",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "@repo/types": "workspace:*"
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "26.4.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "eslint": "10.9.1",
-    "typescript": "7.0.2",
-    "@playwright/test": "^1.56.1"
+    "typescript": "7.0.2"
   }
 }

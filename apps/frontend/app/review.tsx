@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import type { ExtractedField, FieldReview } from "@repo/types/reviewer";
 import { errorMessage, fieldLabel, post } from "./client";
+import { Button } from "./ui/button";
+import { Modal } from "./modal";
 import "./review.css";
 
 function reviewText(review: FieldReview | null) {
@@ -18,7 +20,7 @@ export function ReviewField({
   refresh: () => void;
 }) {
   const [editRevision, setEditRevision] = useState<number>();
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<"approve" | "correct" | null>(null);
   const [correction, setCorrection] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -36,7 +38,7 @@ export function ReviewField({
           ? { value: correction.trim(), note: note.trim() || undefined }
           : {}),
       });
-      setEditing(false);
+      setEditing(null);
       refresh();
     } catch (error) {
       setMessage(errorMessage(error));
@@ -115,13 +117,16 @@ export function ReviewField({
           )}
         </div>
       )}
-      {current && !editing && (
+      {current && (
         <div className="field-actions">
           {(!item.review || corrected) && (
             <button
               className="approve-field"
               disabled={busy}
-              onClick={() => void save("approve")}
+              onClick={() => {
+                setMessage("");
+                setEditing("approve");
+              }}
             >
               <span className="action-check" aria-hidden="true" />
               {item.value === null ? "Confirm gap" : "Approve"}
@@ -133,8 +138,9 @@ export function ReviewField({
             onClick={() => {
               setCorrection(item.review?.value ?? item.value ?? "");
               setNote(item.review?.note ?? "");
+              setMessage("");
               setEditRevision(item.reviewRevision);
-              setEditing(true);
+              setEditing("correct");
             }}
           >
             {corrected ? "Edit correction" : "Correct value"}
@@ -142,49 +148,71 @@ export function ReviewField({
         </div>
       )}
       {editing && current && (
-        <form
-          className="correction"
-          onSubmit={(event: FormEvent) => {
-            event.preventDefault();
-            void save("correct");
-          }}
+        <Modal
+          title={
+            editing === "correct"
+              ? `Correct ${fieldLabel(item.field)}?`
+              : `Approve ${fieldLabel(item.field)}?`
+          }
+          close={() => setEditing(null)}
+          busy={busy}
         >
-          <label className="control">
-            Corrected value
-            <input
-              required
-              value={correction}
-              onChange={(e) => setCorrection(e.target.value)}
-              maxLength={4000}
-            />
-          </label>
-          <label className="control">
-            Note (optional)
-            <textarea
-              rows={2}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={2000}
-            />
-          </label>
-          <div className="field-actions">
-            <button className="primary" disabled={busy || !correction.trim()}>
-              Save correction
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setEditing(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-      {message && (
-        <p className="error" role="alert">
-          {message}
-        </p>
+          <form
+            className="correction"
+            onSubmit={(event: FormEvent) => {
+              event.preventDefault();
+              void save(editing);
+            }}
+          >
+            <p>{item.value ?? item.reason ?? "Gap"}</p>
+            {item.quote && (
+              <blockquote className="source">{item.quote}</blockquote>
+            )}
+            {editing === "correct" && (
+              <>
+                <label className="control">
+                  Corrected value
+                  <input
+                    required
+                    value={correction}
+                    onChange={(e) => setCorrection(e.target.value)}
+                    maxLength={4000}
+                  />
+                </label>
+                <label className="control">
+                  Note (optional)
+                  <textarea
+                    rows={2}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    maxLength={2000}
+                  />
+                </label>
+              </>
+            )}
+            {message && (
+              <p className="error" role="alert">
+                {message}
+              </p>
+            )}
+            <div className="field-actions">
+              <Button
+                variant="default"
+                disabled={busy || (editing === "correct" && !correction.trim())}
+              >
+                {editing === "correct" ? "Save correction" : "Confirm approval"}
+              </Button>
+              <Button
+                variant="outline"
+                type="button"
+                disabled={busy}
+                onClick={() => setEditing(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
     </article>
   );

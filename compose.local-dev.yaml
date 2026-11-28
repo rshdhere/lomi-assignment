@@ -1,0 +1,11 @@
+services:
+  frontend:
+    command: ["pnpm", "--filter", "web", "dev", "--hostname", "0.0.0.0"]
+    volumes:
+      - ./apps/frontend/app:/app/apps/frontend/app:ro
+      - ./apps/frontend/public:/app/apps/frontend/public:ro
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+    mem_limit: 1152m
+    memswap_limit: 1152m
+    cpus: 1

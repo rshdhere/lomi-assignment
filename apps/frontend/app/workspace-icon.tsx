@@ -16,6 +16,7 @@ const shapes = {
       <path d="m15.3 15.3 4.4 4.4" />
     </>
   ),
+  sparkles: <path d="m10 4 2.2 6.1L18 12l-5.8 2.1L10 20l-2.2-5.9L2 12l5.8-1.9z M19 2l.9 2.5L22.5 5.5l-2.6.9L19 9l-.9-2.6-2.6-.9 2.6-1z" />,
   ask: (
     <>
       <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5.5 3.5V17H6a2 2 0 0 1-2-2z" />
@@ -27,7 +28,10 @@ const shapes = {
       <path d="M12 15V4m-4 4 4-4 4 4M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" />
     </>
   ),
-  plus: <path d="M12 5v14M5 12h14" />,
+  send: <path d="M12 19V5m-6 6 6-6 6 6" />,
+  uploadFile: (
+    <path d="M5 2.5h9l5 5v14H5z M14 2.5v5h5 M12 18v-7m-3 3 3-3 3 3" />
+  ),
   menu: <path d="M4 8h16M4 15h16" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,
   chevron: <path d="m7 10 5 5 5-5" />,

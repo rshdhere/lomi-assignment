@@ -5,11 +5,13 @@ export function Modal({
   title,
   close,
   busy = false,
+  side = false,
   children,
 }: {
   title: string;
   close: () => void;
   busy?: boolean;
+  side?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -27,7 +29,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className="workspace-dialog"
+      className={side ? "workspace-dialog ask-panel" : "workspace-dialog"}
       aria-labelledby="dialog-title"
       onCancel={(event) => {
         event.preventDefault();

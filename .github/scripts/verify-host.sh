@@ -44,7 +44,7 @@ SQL
 
 # Reach the real backends behind Caddy without editing its reviewer allowlist.
 compose exec -T frontend node --input-type=module - <<'JS'
-const response = await fetch("http://127.0.0.1:3000/", {signal:AbortSignal.timeout(8000)});
+const response = await fetch("http://127.0.0.1:3000/workspace", {signal:AbortSignal.timeout(8000)});
 if (!response.ok || !(await response.text()).includes("Lomi | Document review")) throw Error("Dashboard did not render.");
 JS
 compose exec -T backend node --input-type=module - "$stage" <<'JS'
