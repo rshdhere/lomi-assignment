@@ -4,6 +4,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 ENV HUSKY=0
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates poppler-utils && rm -rf /var/lib/apt/lists/* \
     && npm install --global pnpm@10.28.0
+RUN install -d -o 1000 -g 1000 /run/pdf-parser
 WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile

@@ -5,14 +5,43 @@ x-process: &process
     driver: local
     options: { max-size: 8m, max-file: "3" }
 x-app: &app
+  environment: { PDF_PARSER_SOCKET: /run/pdf-parser/parser.sock }
   <<: *process
   image: ${APP_IMAGE}
   init: true
   user: "1000:1000"
   security_opt: [no-new-privileges:true]
   cap_drop: [ALL]
-  volumes: [/run/lomi/app-aws:/run/lomi-aws:ro]
+  volumes:
+    [/run/lomi/app-aws:/run/lomi-aws:ro, parser-socket:/run/pdf-parser:ro]
 services:
+  pdf-parser:
+    image: ${APP_IMAGE}
+    command: [node, packages/services/src/parser-server.ts]
+    network_mode: none
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 48
+    mem_limit: 192m
+    cpus: 1
+    restart: unless-stopped
+    tmpfs: [/tmp:size=8m, noexec, nosuid, nodev]
+    environment:
+      MAX_FILE_BYTES: ${MAX_FILE_BYTES:-10485760}
+    volumes: [parser-socket:/run/pdf-parser]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "require('fs').accessSync('/run/pdf-parser/parser.sock')",
+        ]
+      interval: 3s
+      timeout: 2s
+      retries: 15
   postgres:
     <<: *process
     image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
@@ -74,7 +103,8 @@ services:
     command: [pnpm, --filter, "@repo/worker", start]
     mem_limit: 768m
     env_file: [{ path: /run/lomi/worker.env, format: raw }]
-    volumes: [/run/lomi/worker-aws:/run/lomi-aws:ro]
+    volumes:
+      [/run/lomi/worker-aws:/run/lomi-aws:ro, parser-socket:/run/pdf-parser:ro]
     networks: [database, outbound]
     stop_grace_period: 90s
   frontend:
@@ -108,6 +138,8 @@ services:
       - /srv/lomi/caddy-data:/data
       - /srv/lomi/caddy-config:/config
     networks: [api, web, public]
+volumes:
+  parser-socket:
 networks:
   database: { internal: true }
   api: { internal: true }

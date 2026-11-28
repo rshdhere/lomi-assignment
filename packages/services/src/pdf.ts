@@ -1,6 +1,9 @@
+import { isolatedParse } from "./parser-client.ts";
 import { execFile } from "node:child_process";
 
 export function parsePdf(bytes: Buffer): Promise<string> {
+  if (process.env.PDF_PARSER_SOCKET)
+    return isolatedParse(process.env.PDF_PARSER_SOCKET, "/text", bytes);
   if (!bytes.subarray(0, 5).equals(Buffer.from("%PDF-")))
     return Promise.reject(new Error("Invalid PDF signature"));
   return new Promise((resolve, reject) => {

@@ -32,6 +32,11 @@ function isolatedStack() {
     const labels = c.Config.Labels;
     const name = labels["com.docker.compose.service"];
     assert.equal(labels["com.docker.compose.project"], "lomi-check");
+    if (c.Config.Labels["com.docker.compose.service"] === "pdf-parser") {
+      assert.equal(c.HostConfig.NetworkMode, "none");
+      assert(c.HostConfig.ReadonlyRootfs);
+      continue;
+    }
     assert.deepEqual(Object.keys(c.NetworkSettings.Networks), [
       "lomi-check_default",
     ]);

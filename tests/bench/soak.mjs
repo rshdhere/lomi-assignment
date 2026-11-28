@@ -59,6 +59,11 @@ function verifyStack() {
   const services = {};
   for (const c of JSON.parse(docker("inspect", ...ids.split(/\s+/)))) {
     assert.equal(c.Config.Labels["com.docker.compose.project"], project);
+    if (c.Config.Labels["com.docker.compose.service"] === "pdf-parser") {
+      assert.equal(c.HostConfig.NetworkMode, "none");
+      assert(c.HostConfig.ReadonlyRootfs);
+      continue;
+    }
     assert.deepEqual(Object.keys(c.NetworkSettings.Networks), [
       project + "_default",
     ]);
