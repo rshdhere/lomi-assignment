@@ -46,6 +46,15 @@ paths:
   "/documents":
     get:
       summary: List current documents
+      parameters:
+        - name: limit
+          in: query
+          description: Select cursor pagination ordered by stable document ID. Unpaged requests retain their existing order.
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: cursor
+          in: query
+          description: Continue after the previous nextCursor. Page size defaults to 50.
+          schema: { type: string }
       responses:
         "200":
           description: List current documents
@@ -54,6 +63,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  nextCursor:
+                    type: [string, "null"]
+                    description: Present for paged requests. Null on the last page.
                   documents:
                     type: array
                     items:
