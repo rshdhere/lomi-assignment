@@ -15,3 +15,7 @@ Run `pnpm --filter @repo/services test` for fixture classification, evidence val
 One local run on an AMD Ryzen 5 5500U with Radeon Graphics (12 logical CPUs) measured regex classification after PDF text parsing. The invoice took 0.363 ms, the revised invoice 0.059 ms, the lease 0.065 ms and the market report 0.065 ms. All four predictions matched the fixture manifest. The runner had no provider key, so API latency and comparative accuracy remain unmeasured.
 
 ![Focused HTTP, PDF, storage and database test results](../../docs/evidence/focused-tests.png)
+
+### Retrieval comparison
+
+On an isolated database with the three v1 seeds indexed and the matching embedding provider configured, run `pnpm --filter @repo/services exec tsx src/retrieval-benchmark.ts`. Each case embeds its query once. The harness compares lexical search, cosine search and reciprocal rank fusion at six results against labeled source passages, including a multi-passage question. Run against a stable database snapshot. The fixture sample is a regression instrument. Production routing and ranking should change only after an evaluation on representative held-out questions.
