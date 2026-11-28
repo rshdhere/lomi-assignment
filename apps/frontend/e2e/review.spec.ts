@@ -47,7 +47,10 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
   const vendor = fields.filter({
     has: page.getByRole("heading", { name: "Vendor name" }),
   });
-  await vendor.getByRole("button", { name: "Correct value" }).click();
+  await page.getByRole("button", { name: "Show Vendor name" }).click();
+  await vendor.getByRole("button", { name: "Correct value" }).click({
+    force: true,
+  });
   await vendor
     .getByLabel("Corrected value")
     .fill("Meridian Office Supplies LLC");
@@ -111,10 +114,13 @@ test("browse the mobile library and open the cited document version", async ({
     name: "Upload PDFs",
     exact: true,
   });
-  const ask = page.getByRole("button", { name: "Ask documents", exact: true });
   const browse = page.getByRole("button", { name: "Browse", exact: true });
   const workspaceNavigation = page.getByRole("navigation", {
     name: "Workspace navigation",
+  });
+  const ask = workspaceNavigation.getByRole("button", {
+    name: "Ask documents",
+    exact: true,
   });
 
   await mkdir(screenshots, { recursive: true });
