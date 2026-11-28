@@ -139,6 +139,12 @@ test(
         [],
         {},
       );
+      await assert.rejects(
+        createBatch([
+          { ...item, id: doc!.id, key: prefix + "-stale", expectedVersion: 1 },
+        ]),
+        /newer version/,
+      );
       const revised = await getDocument(doc!.id);
       assert.deepEqual(revised.progress, {
         approved: 0,

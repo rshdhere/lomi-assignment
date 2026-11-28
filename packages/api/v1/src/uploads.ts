@@ -116,6 +116,7 @@ uploads.post("/uploads", uploadLimit, async (req, res) => {
       id: itemId,
       key,
       documentId: file.documentId,
+      expectedVersion: prior?.version,
       type: prior?.type ?? file.type ?? null,
       title: prior?.title ?? file.name,
       size: file.size,
@@ -171,6 +172,7 @@ uploads.post("/uploads/:batchId/complete", uploadLimit, async (req, res) => {
     items.push({
       id: file.documentId,
       seedId: file.id,
+      expectedVersion: file.expectedVersion,
       key,
       objectVersion,
       contentHash,

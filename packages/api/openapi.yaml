@@ -626,7 +626,8 @@ components:
           minItems: 1
           description:
             At most maxBatchFiles from GET /limits. Each existing document
-            may appear once.
+            may appear once. Completion returns 409 if a revision target has advanced
+            since its upload manifest was issued.
       required:
         - files
       additionalProperties: false
