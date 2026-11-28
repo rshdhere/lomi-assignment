@@ -14,7 +14,7 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
   await mkdir(screenshots, { recursive: true });
   await page.goto("/workspace");
   await page
-    .getByRole("option", { name: /Market report excerpt/ })
+    .getByRole("button", { name: /Market report excerpt/ })
     .first()
     .click();
   const gap = page.locator("article.field").filter({
@@ -28,7 +28,7 @@ test("review an invoice, revise it, and inspect a seeded report gap", async ({
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "Upload", exact: true }).click();
+  await page.getByRole("button", { name: "Upload PDFs", exact: true }).click();
   const dialog = page.getByRole("dialog");
   const picker = dialog.locator('input[type="file"]');
   // Each newly opened dialog fetches its upload limits before accepting files.
@@ -106,19 +106,22 @@ test("browse the mobile library and open the cited document version", async ({
   const lease = "Lease excerpt — 1200 Harbor Street, Unit 4B";
   const invoiceId = "doc-invoice-001";
   const title = page.locator("#document-detail h2.document-title");
-  const library = page.getByRole("navigation", { name: "Document library" });
+  const library = page.getByRole("table", { name: "Document library" });
   const uploadAction = page.getByRole("button", {
-    name: "Upload",
+    name: "Upload PDFs",
     exact: true,
   });
   const ask = page.getByRole("button", { name: "Ask documents", exact: true });
   const browse = page.getByRole("button", { name: "Browse", exact: true });
+  const workspaceNavigation = page.getByRole("navigation", {
+    name: "Workspace navigation",
+  });
 
   await mkdir(screenshots, { recursive: true });
   await page.goto("/workspace");
   const search = page.getByRole("searchbox", { name: "Find a document" });
   await search.fill("excerpt");
-  await library.getByRole("option", { name: new RegExp(report) }).click();
+  await library.getByRole("button", { name: new RegExp(report) }).click();
   await expect(title).toHaveText(report);
   await expect(page.getByRole("heading", { name: "Market area" })).toBeVisible({
     timeout: 120_000,
@@ -131,8 +134,9 @@ test("browse the mobile library and open the cited document version", async ({
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(browse).toBeVisible();
+  await expect(workspaceNavigation).toBeHidden();
   await expect(library).toBeHidden();
-  await expect(ask).toBeVisible();
+  await expect(ask).toBeHidden();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
@@ -148,10 +152,18 @@ test("browse the mobile library and open the cited document version", async ({
   await expect(uploadAction).toBeFocused();
 
   await browse.click();
+  await expect(workspaceNavigation).toBeVisible();
+  await ask.click();
+  const askDialog = page.getByRole("dialog", { name: "Ask your documents" });
+  await expect(askDialog).toBeVisible();
+  await expect(workspaceNavigation).toBeHidden();
+  await askDialog.getByRole("button", { name: "Close dialog" }).click();
+
+  await browse.click();
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await search.fill("1200 Harbor Street");
-  await expect(library.getByRole("option")).toHaveCount(1);
-  await library.getByRole("option", { name: new RegExp(lease) }).click();
+  await expect(library.getByRole("button")).toHaveCount(1);
+  await library.getByRole("button", { name: new RegExp(lease) }).click();
   await expect(title).toHaveText(lease);
   await expect(browse).toHaveAttribute("aria-expanded", "false");
 
@@ -179,6 +191,7 @@ test("browse the mobile library and open the cited document version", async ({
       },
     }),
   );
+  await browse.click();
   await ask.click();
   const dialog = page.getByRole("dialog", { name: "Ask your documents" });
   await expect(dialog.getByLabel("Search in")).toHaveValue("");
