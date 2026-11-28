@@ -83,7 +83,7 @@ export function Overview({
               onClick={() => open(next.id)}
             >
               Continue review{" "}
-              <span className="upload-disc" aria-hidden="true">
+              <span className="action-arrow" aria-hidden="true">
                 →
               </span>
             </button>
