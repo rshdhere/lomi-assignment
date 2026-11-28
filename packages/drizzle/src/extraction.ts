@@ -225,3 +225,21 @@ export async function reviewedSources(
     order by ${documentId && question ? sql`(${namedField}) desc,` : sql``}ts_rank(${reviewedText},${terms}) desc,e.field limit 20`)
   ).rows;
 }
+
+// A short publication lease covers both a missed Redis write and a later Redis flush.
+export async function reserveExtractionOffers() {
+  return (
+    await db.execute<{ id: string; traceparent: string | null }>(sql`
+    with due as (
+      select w.version_id,w.stage,w.generation,v.metadata->>'traceparent' as traceparent
+      from stage_work w join document_versions v using(version_id)
+      where w.stage='extract' and w.next_offer_at<=now()
+        and ((v.status='queued' and v.eligible_at<=now())
+          or (v.status='extracting' and v.lease_until<now()))
+      order by w.next_offer_at,w.version_id limit 100 for update of w skip locked
+    )
+    update stage_work w set next_offer_at=now()+interval '10 seconds'
+    from due where (w.version_id,w.stage,w.generation)=(due.version_id,due.stage,due.generation)
+    returning w.version_id as id,due.traceparent`)
+  ).rows;
+}

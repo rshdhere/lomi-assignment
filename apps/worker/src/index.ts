@@ -14,7 +14,7 @@ import {
   finishClaim,
   pool,
   renewClaim,
-  scheduledVersions,
+  reserveExtractionOffers,
 } from "@repo/drizzle";
 import {
   TransientProviderError,
@@ -128,7 +128,7 @@ for (const signal of ["SIGTERM", "SIGINT"])
 // reconstruct all outstanding work after a queue flush or missed publish.
 while (!stopping) {
   try {
-    const jobs = await scheduledVersions();
+    const jobs = await reserveExtractionOffers();
     await queue.addBulk(
       jobs.map(({ id, traceparent }) => ({
         name: "extract",
