@@ -8,12 +8,12 @@ type Candidate = {
 };
 
 export function validateValues(
-  fields: readonly { field: string }[],
+  fields: readonly { field: string; type?: string }[],
   candidates: Candidate[],
   text: string,
 ): Value[] {
   const sourceLines = text.split("\n");
-  return fields.map(({ field }) => {
+  return fields.map(({ field, type }) => {
     const matches = candidates.filter(
       (candidate) => candidate && candidate.field === field,
     );
@@ -35,6 +35,27 @@ export function validateValues(
     const quote = resolveQuote(item.quote, text, sourceLines);
     if (quote === null)
       return gap("Quoted evidence does not appear verbatim in this version");
+    const start = text.indexOf(quote);
+    if (text.indexOf(quote, start + 1) !== -1)
+      return gap("Evidence occurs more than once and its source is ambiguous");
+    if (type === "money" || type === "percent" || type === "number") {
+      const amounts = numbers(item.value);
+      if (amounts.length !== 1 || !numbers(quote).includes(amounts[0]!))
+        return gap("The extracted number does not match its quoted evidence");
+      if (type === "percent" && !/%|percent/i.test(quote))
+        return gap("Quoted evidence does not establish a percentage");
+      const currencies = /USD|EUR|GBP|INR|[$€£₹]/gi;
+      const canonical = (unit: string) =>
+        ({ $: "USD", "€": "EUR", "£": "GBP", "₹": "INR" })[unit] ??
+        unit.toUpperCase();
+      const units = [...quote.matchAll(currencies)].map((m) => canonical(m[0]));
+      if (
+        [...item.value.matchAll(currencies)].some(
+          (m) => !units.includes(canonical(m[0])),
+        )
+      )
+        return gap("The extracted currency does not match its quoted evidence");
+    }
     return { field, value: item.value, quote, reason: null };
   });
 }
@@ -78,4 +99,16 @@ export function segmentText(text: string, starts: number[]): string[] {
     }
   }
   return sections;
+}
+
+function numbers(text: string): string[] {
+  return [...text.matchAll(/[+−-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/g)].map(
+    ([token]) =>
+      token
+        .replaceAll(",", "")
+        .replace("−", "-")
+        .replace(/^\+/, "")
+        .replace(/(\.\d*?)0+$/, "$1")
+        .replace(/\.$/, ""),
+  );
 }

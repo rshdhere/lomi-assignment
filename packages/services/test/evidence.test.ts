@@ -38,3 +38,19 @@ test("classifies fixture PDF text and declines ambiguity", async () => {
   assert.equal(classifyRegex("Household survey"), null);
   assert.equal(classifyRegex("invoice invoice number landlord tenant"), null);
 });
+
+test("accepts equivalent amounts and rejects contradictory or ambiguous evidence", () => {
+  const check = (value: string, quote: string, text = quote) =>
+    validateValues(
+      [{ field: "total", type: "money" }],
+      [{ field: "total", value, quote }],
+      text,
+    )[0];
+  assert.equal(check("USD 45000", "Total $45,000.00")?.value, "USD 45000");
+  assert.equal(check("50000", "Total $45,000")?.value, null);
+  assert.equal(check("EUR 45000", "Total $45,000")?.value, null);
+  assert.equal(
+    check("45000", "Total 45000", "Total 45000\nTotal 45000")?.value,
+    null,
+  );
+});
