@@ -108,6 +108,7 @@ export async function createBatch(
 }
 
 type Summary = {
+  extractionStatus: Status;
   id: string;
   title: string;
   type: DocumentType | null;

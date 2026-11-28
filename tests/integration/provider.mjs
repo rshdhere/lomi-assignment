@@ -19,6 +19,10 @@ createServer(async (req, res) => {
     const data = JSON.parse(body);
     let result;
     if (req.url === "/v1/embeddings") {
+      if (existsSync("/tmp/lomi-reject-index")) {
+        res.writeHead(503, { "content-type": "application/json" }).end("{}");
+        return;
+      }
       result = {
         data: data.input.map((_, index) => ({
           index,

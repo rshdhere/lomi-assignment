@@ -53,7 +53,10 @@ async function revision(
   connection: Parameters<typeof getDocument>[2],
 ) {
   const doc = await getDocument(id, undefined, connection);
-  if (doc.status === "queued" || doc.status === "extracting")
+  if (
+    doc.extractionStatus === "queued" ||
+    doc.extractionStatus === "extracting"
+  )
     throw new HttpError(
       409,
       "Retry the revision after the current extraction finishes.",

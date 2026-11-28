@@ -133,7 +133,11 @@ function Detail({
           </label>
           <button
             onClick={upload}
-            disabled={["queued", "extracting"].includes(doc.status) || !current}
+            disabled={
+              ["queued", "extracting"].includes(
+                doc.extractionStatus ?? doc.status,
+              ) || !current
+            }
           >
             <WorkspaceIcon name="upload" />
             Upload revision
@@ -142,7 +146,11 @@ function Detail({
       </header>
       {doc.status === "failed" && (
         <section className="failure">
-          <h2>Extraction failed</h2>
+          <h2>
+            {doc.indexingStatus === "failed"
+              ? "Search indexing failed"
+              : "Extraction failed"}
+          </h2>
           <p>{doc.error || "The document could not be extracted."}</p>
           {current && (
             <button disabled={retrying} onClick={() => void retry()}>
@@ -152,7 +160,9 @@ function Detail({
           {retryError && <p role="alert">{retryError}</p>}
         </section>
       )}
-      {(doc.status === "queued" || doc.status === "extracting") && (
+      {["queued", "extracting"].includes(
+        doc.extractionStatus ?? doc.status,
+      ) && (
         <p className="notice" role="status">
           {doc.status === "queued"
             ? "Waiting for extraction to start."
