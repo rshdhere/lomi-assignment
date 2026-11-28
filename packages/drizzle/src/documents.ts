@@ -141,8 +141,12 @@ export async function listDocuments() {
   ).rows;
 }
 
-export async function getDocument(id: string, version?: number) {
-  const result = await db.execute<
+export async function getDocument(
+  id: string,
+  version?: number,
+  connection: Pick<typeof db, "execute"> = db,
+) {
+  const result = await connection.execute<
     Summary & {
       versionId: string;
       parsedText: string | null;
@@ -156,7 +160,7 @@ export async function getDocument(id: string, version?: number) {
     order by v.version desc limit 1`);
   if (!result.rows[0]) throw new ApiError(404, "Document or version not found");
   const { versionId, ...doc } = result.rows[0];
-  const values = await db.execute<{
+  const values = await connection.execute<{
     id: string;
     field: string;
     value: string | null;

@@ -149,7 +149,17 @@ function pdfUpload(bytes) {
   form.set("type", "invoice");
   return { method: "POST", body: form };
 }
-const receipt = await request("/documents", pdfUpload(invoice), 202);
+const uploadKey = randomUUID();
+const keyedPdf = (bytes) => ({
+  ...pdfUpload(bytes),
+  headers: { "Idempotency-Key": uploadKey },
+});
+const [receipt, replayed] = await Promise.all([
+  request("/documents", keyedPdf(invoice), 202),
+  request("/documents", keyedPdf(invoice), 202),
+]);
+assert.deepEqual(receipt, replayed);
+await request("/documents", keyedPdf(revised), 409);
 const path = "/documents/" + receipt.id;
 const conflict = await request(path + "/versions", pdfUpload(revised), 409);
 assert.match(conflict.message, /after the current extraction finishes/i);
