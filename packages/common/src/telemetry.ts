@@ -151,7 +151,12 @@ export function extractionTelemetry() {
 }
 
 export type ExtractionStage =
-  "read pinned PDF" | "parse PDF" | "extract and enrich" | "commit extraction";
+  | "read pinned PDF"
+  | "parse PDF"
+  | "extract and enrich"
+  | "commit extraction"
+  | "provider extraction"
+  | "embed sections";
 
 export function extractionStage<T>(
   stage: ExtractionStage,
