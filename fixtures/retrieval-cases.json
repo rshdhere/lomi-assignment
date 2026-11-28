@@ -1,0 +1,6 @@
+[
+  {"query":"INV-2025-0847","document":"doc-invoice-001","version":1,"passages":["Invoice Number: INV-2025-0847"]},
+  {"query":"who supplied the goods","document":"doc-invoice-001","version":1,"passages":["MERIDIAN OFFICE SUPPLIES LLC"]},
+  {"query":"security deposit monthly rent","document":"doc-lease-001","version":1,"passages":["$3,525.00","$2,350.00"]},
+  {"query":"rental vacancy this quarter","document":"doc-report-001","version":1,"passages":["vacancy rate declined to 4.2%","Reporting Period: Q3 2025"]}
+]
