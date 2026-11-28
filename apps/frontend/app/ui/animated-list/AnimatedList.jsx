@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
@@ -156,7 +157,7 @@ const AnimatedList = ({
     fadeSize
   };
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+  useIsomorphicLayoutEffect(() => { settingsRef.current = settings; });
 
   useIsomorphicLayoutEffect(() => {
     const root = rootRef.current;
@@ -532,7 +533,7 @@ const AnimatedList = ({
                   <>
                     {(entry.image || entry.icon) && (
                       <span className="animated-list__lead">
-                        {entry.image ? <img src={entry.image} alt="" draggable={false} /> : entry.icon}
+                        {entry.image ? <Image unoptimized width={36} height={36} src={entry.image} alt="" draggable={false} /> : entry.icon}
                       </span>
                     )}
                     <span className="animated-list__text">

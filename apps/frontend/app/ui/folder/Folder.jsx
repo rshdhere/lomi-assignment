@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Children, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './Folder.css';
 
@@ -678,7 +679,7 @@ const renderItem = item => {
     if (item.image) {
       return (
         <div className="folder-photo">
-          <img src={item.image} alt={item.alt ?? item.title ?? ''} draggable={false} />
+          <Image unoptimized width={180} height={232} src={item.image} alt={item.alt ?? item.title ?? ''} draggable={false} />
         </div>
       );
     }
@@ -848,7 +849,7 @@ const Folder = ({
   );
 
   const setOpenRef = useRef(setOpen);
-  setOpenRef.current = setOpen;
+  useIsomorphicLayoutEffect(() => { setOpenRef.current = setOpen; });
 
   const rgb = parseColor(color);
   const paper = parseColor(paperColor);
@@ -856,8 +857,7 @@ const Folder = ({
   const insideTop = rgbString(mixRgb(rgb, [0, 0, 0], 0.08));
   const insideBottom = rgbString(backTone);
 
-  const settingsRef = useRef(null);
-  settingsRef.current = {
+  const settings = {
     open: isOpen,
     layout,
     openOn,
@@ -885,6 +885,8 @@ const Folder = ({
     view,
     g
   };
+  const settingsRef = useRef(settings);
+  useIsomorphicLayoutEffect(() => { settingsRef.current = settings; });
 
   useEffect(() => {
     const root = rootRef.current;
@@ -1823,7 +1825,7 @@ const Folder = ({
     '--folder-doc-w': `${g.docW}px`,
     '--folder-doc-h': `${g.docH}px`,
     '--folder-frost': `${(1.5 + clamp(frost, 0, 1) * 10) * scale}px`,
-    '--folder-depth': `${settingsRef.current.depth}px`,
+    '--folder-depth': `${settings.depth}px`,
     '--folder-scale': scale,
     ...style
   };
