@@ -12,6 +12,8 @@ export interface DocumentSummary {
   title: string;
   type: DocumentType;
   version: number;
+  extractionStatus?: ExtractionStatus;
+  indexingStatus?: "waiting" | "queued" | "indexing" | "ready" | "failed";
   status: ExtractionStatus;
   progress: Progress;
   updatedAt: string;

@@ -104,7 +104,10 @@ function Detail({
             {typeLabels[doc.type]}
           </span>
           <span className={`state ${doc.status}`}>
-            {statusLabels[doc.status]}
+            {doc.extractionStatus === "extracted" &&
+            doc.indexingStatus !== "ready"
+              ? "Review ready · search " + doc.indexingStatus
+              : statusLabels[doc.status]}
           </span>
         </div>
         <h2 className="document-title">{doc.title}</h2>
@@ -157,7 +160,7 @@ function Detail({
           This view updates automatically.
         </p>
       )}
-      {doc.status === "extracted" && (
+      {(doc.extractionStatus ?? doc.status) === "extracted" && (
         <>
           <div className="review-header">
             <div>
