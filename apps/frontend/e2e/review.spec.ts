@@ -107,7 +107,10 @@ test("browse the mobile library and open the cited document version", async ({
   const invoiceId = "doc-invoice-001";
   const title = page.locator("#document-detail h2.document-title");
   const library = page.getByRole("navigation", { name: "Document library" });
-  const uploadAction = page.getByRole("button", { name: "Upload", exact: true });
+  const uploadAction = page.getByRole("button", {
+    name: "Upload",
+    exact: true,
+  });
   const ask = page.getByRole("button", { name: "Ask documents", exact: true });
   const browse = page.getByRole("button", { name: "Browse", exact: true });
 
@@ -145,6 +148,7 @@ test("browse the mobile library and open the cited document version", async ({
   await expect(uploadAction).toBeFocused();
 
   await browse.click();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
   await search.fill("1200 Harbor Street");
   await expect(library.getByRole("option")).toHaveCount(1);
   await library.getByRole("option", { name: new RegExp(lease) }).click();

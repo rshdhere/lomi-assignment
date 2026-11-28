@@ -6,10 +6,10 @@ import type {
   DocumentSummary,
   Progress,
 } from "@repo/types/reviewer";
-import { apiText, errorMessage, post, typeLabels } from "../client";
+import { apiText, errorMessage, fieldLabel, post, typeLabels } from "../client";
 import AnimatedList from "../ui/animated-list/AnimatedList";
 import { Ask } from "../ask";
-import { ReviewField } from "../review";
+import { ReviewBounceDeck, ReviewField } from "../review";
 import { Upload } from "../upload";
 import { WorkspaceIcon } from "../workspace-icon";
 
@@ -183,10 +183,16 @@ function Detail({
                 ))}
             </select>
           </label>
-          <button type="button" className="ask-text" onClick={ask}>Ask documents</button>
+          <button type="button" className="ask-text" onClick={ask}>
+            Ask documents
+          </button>
           <button
             onClick={upload}
-            disabled={["queued", "extracting"].includes(doc.extractionStatus ?? doc.status) || !current}
+            disabled={
+              ["queued", "extracting"].includes(
+                doc.extractionStatus ?? doc.status,
+              ) || !current
+            }
           >
             <WorkspaceIcon name="upload" />
             Upload revision
@@ -239,14 +245,20 @@ function Detail({
               Pending only
             </label>
           </div>
-          {fields.map((item) => (
-            <ReviewField
-              key={item.id}
-              item={item}
-              current={current}
-              refresh={refresh}
-            />
-          ))}
+          {fields.length > 0 && (
+            <ReviewBounceDeck
+              labels={fields.map((item) => fieldLabel(item.field))}
+            >
+              {fields.map((item) => (
+                <ReviewField
+                  key={item.id}
+                  item={item}
+                  current={current}
+                  refresh={refresh}
+                />
+              ))}
+            </ReviewBounceDeck>
+          )}
           {!fields.length && (
             <p className="notice">
               {onlyPending

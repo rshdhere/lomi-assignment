@@ -6,12 +6,16 @@ export function Modal({
   close,
   busy = false,
   side = false,
+  closing = false,
+  onExit,
   children,
 }: {
   title: string;
   close: () => void;
   busy?: boolean;
   side?: boolean;
+  closing?: boolean;
+  onExit?: () => void;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -26,10 +30,25 @@ export function Modal({
       }
     };
   }, []);
+  useEffect(() => {
+    if (!closing || !onExit) return;
+    let active = true;
+    const animations = ref.current?.getAnimations() ?? [];
+    void Promise.allSettled(
+      animations.map((animation) => animation.finished),
+    ).then(() => {
+      if (active) onExit();
+    });
+    return () => {
+      active = false;
+    };
+  }, [closing, onExit]);
+
   return (
     <dialog
       ref={ref}
       className={side ? "workspace-dialog ask-panel" : "workspace-dialog"}
+      data-closing={closing || undefined}
       aria-labelledby="dialog-title"
       onCancel={(event) => {
         event.preventDefault();

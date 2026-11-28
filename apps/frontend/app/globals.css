@@ -1,3 +1,14 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" source("./");
+
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:not(:where(.workspace, .workspace *)) {
+      @slot;
+    }
+  }
+}
+
 :root {
   --brand-blue: #4189d6;
   --action-blue: #1b67b1;
@@ -155,19 +166,27 @@ small,
 }
 .mast-actions > button,
 .sheet-actions button.upload-action {
-  --sheen: rgb(91 160 235 / 16%);
   position: relative;
   overflow: hidden;
   border-radius: 999px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 45%), 0 2px 4px rgb(27 66 105 / 9%);
-  background-image: linear-gradient(180deg, transparent 35%, rgb(65 137 214 / 5%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 45%),
+    0 2px 4px rgb(27 66 105 / 9%);
+  background-image: linear-gradient(
+    180deg,
+    transparent 35%,
+    rgb(65 137 214 / 5%)
+  );
 }
 .mast-actions .upload-action,
 .sheet-actions button.upload-action {
-  --sheen: rgb(255 255 255 / 24%);
   gap: 0.75rem;
   padding: 0.4rem 0.45rem 0.4rem 1.1rem;
-  background-image: linear-gradient(180deg, rgb(255 255 255 / 12%), transparent 75%);
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 12%),
+    transparent 75%
+  );
 }
 .mast-logo,
 .ask-logo {
@@ -181,37 +200,9 @@ small,
   height: 2.4rem;
 }
 .mast-actions .workspace-icon,
-.upload-disc .workspace-icon {
+.upload-plus {
   width: 1rem;
   height: 1rem;
-}
-.upload-disc {
-  display: grid;
-  place-items: center;
-  width: 1.8rem;
-  height: 1.8rem;
-  border-radius: 50%;
-  color: var(--ink);
-  background: var(--mint);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .mast-actions > button::after,
-  .sheet-actions button.upload-action::after {
-    content: "";
-    position: absolute;
-    inset: -40% auto -40% 0;
-    width: 42%;
-    pointer-events: none;
-    background: linear-gradient(90deg, transparent, var(--sheen), transparent);
-    transform: translateX(-150%) skewX(-18deg);
-  }
-  .mast-actions > button:is(:hover, :focus-visible)::after,
-  .sheet-actions button.upload-action:enabled:is(:hover, :focus-visible)::after {
-    animation: header-button-shine 520ms ease-out;
-  }
-  @keyframes header-button-shine {
-    to { transform: translateX(320%) skewX(-18deg); }
-  }
 }
 .library-toggle {
   display: none;
@@ -221,7 +212,7 @@ small,
 }
 .workspace-grid {
   display: grid;
-  grid-template-columns: minmax(15.5rem, 18rem) minmax(0, 1fr);
+  grid-template-columns: clamp(16rem, 24vw, 20rem) minmax(0, 1fr);
   align-items: start;
   gap: clamp(1rem, 2vw, 2rem);
   margin-top: 1.6rem;
@@ -428,6 +419,8 @@ small,
   overflow-wrap: anywhere;
 }
 .document-summary {
+  border-radius: 1rem;
+  border-top: 3px solid var(--mint);
   padding: clamp(1.1rem, 2.3vw, 2rem);
   background: var(--surface);
 }
@@ -608,8 +601,12 @@ small,
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, select, textarea {
-    transition: background-color 160ms ease, border-color 160ms ease;
+  button,
+  select,
+  textarea {
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease;
   }
   .library-toggle .workspace-icon {
     transition: transform 180ms ease;
@@ -647,7 +644,8 @@ small,
     border-radius: 0.4rem;
     font: 500 0.875rem/1.35 var(--sans);
   }
-  :is(.version-label, .sheet-files, .ask-scope) option:is(:checked, :hover, :focus-visible) {
+  :is(.version-label, .sheet-files, .ask-scope)
+    option:is(:checked, :hover, :focus-visible) {
     background: var(--soft);
     color: var(--action-blue);
   }
@@ -698,4 +696,34 @@ button.ask-text {
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
-.doc-tools .ask-text { margin-inline-start: auto; }
+.doc-tools .ask-text {
+  margin-inline-start: auto;
+}
+
+.workspace-sidebar-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(1rem, 2vw, 2rem);
+  margin-top: 1.6rem;
+}
+.workspace-sidebar-layout > .detail {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-sidebar-layout > div:first-child {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100svh - 2rem);
+  border-radius: 1rem;
+}
+.workspace-sidebar-layout .library-content nav {
+  margin-top: 0.75rem;
+}
+@media (width < 48rem) {
+  .workspace-sidebar-layout {
+    flex-direction: column;
+  }
+  .workspace-sidebar-layout > .detail {
+    width: 100%;
+  }
+}

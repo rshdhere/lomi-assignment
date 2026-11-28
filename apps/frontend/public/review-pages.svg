@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="180" viewBox="0 0 360 180" fill="none">
+ <defs>
+  <linearGradient id="back" x2="1" y2="1"><stop stop-color="#a5cfff"/><stop offset="1" stop-color="#6199db"/></linearGradient>
+  <linearGradient id="seal" x2="1" y2="1"><stop stop-color="#3f97ed"/><stop offset="1" stop-color="#155da8"/></linearGradient>
+  <pattern id="grid" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#83afe0"/></pattern>
+ </defs>
+ <ellipse cx="186" cy="157" rx="89" ry="9" fill="#82a9db" opacity=".18"/>
+ <path fill="url(#grid)" d="M53 65h66v74H53zM255 15h54v48h-54z"/>
+ <g transform="rotate(-14 165 90)"><rect x="107" y="33" width="104" height="118" rx="9" fill="url(#back)"/></g>
+ <g transform="rotate(-5 180 90)"><rect x="124" y="23" width="107" height="128" rx="9" fill="#dfedfd" stroke="#8cb5e5"/></g>
+ <g transform="rotate(7 197 88)">
+  <rect x="142" y="15" width="112" height="134" rx="10" fill="#fff" stroke="#9fbfe4"/>
+  <rect x="156" y="31" width="27" height="7" rx="3.5" fill="#367fcc"/>
+  <path d="M156 50h75M156 58h56" stroke="#c5d9ef" stroke-width="4" stroke-linecap="round"/>
+  <rect x="155" y="74" width="85" height="23" rx="5" fill="#eaf4ff"/>
+  <path d="m162 85 3 3 6-7" stroke="#2873bf" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M180 85h45M157 111h64M157 122h45" stroke="#aac9ea" stroke-width="4" stroke-linecap="round"/>
+ </g>
+ <circle cx="251" cy="132" r="25" fill="#b0cbed" opacity=".6"/>
+ <circle cx="251" cy="128" r="24" fill="url(#seal)" stroke="#fff" stroke-width="3"/>
+ <path d="m241 128 7 7 13-15" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
