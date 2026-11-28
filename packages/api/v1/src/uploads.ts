@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Router, type RequestHandler } from "express";
 import multer from "multer";
 import { HttpError } from "@repo/common";
@@ -6,6 +6,7 @@ import { config } from "@repo/config";
 import { createBatch, getDocument } from "@repo/drizzle";
 import {
   saveBatch,
+  replayUpload,
   loadBatch,
   pinBatch,
   acceptUploadBatch,
@@ -47,8 +48,11 @@ function objectKey() {
   return `documents/${randomUUID()}.pdf`;
 }
 
-async function revision(id: string) {
-  const doc = await getDocument(id);
+async function revision(
+  id: string,
+  connection: Parameters<typeof getDocument>[2],
+) {
+  const doc = await getDocument(id, undefined, connection);
   if (doc.status === "queued" || doc.status === "extracting")
     throw new HttpError(
       409,
@@ -65,26 +69,40 @@ const receivePdf: RequestHandler = async (req, res) => {
     throw new HttpError(415, "Use application/pdf for the file part");
   const id =
     req.params.id === undefined ? undefined : identifier.parse(req.params.id);
-  const prior = id ? await revision(id) : undefined;
-  const revisionInput = prior ? revisionFields.parse(req.body) : undefined;
+  const revisionInput = id ? revisionFields.parse(req.body) : undefined;
   const fields = revisionInput ?? uploadFields.parse(req.body);
-  if (prior && fields.type && fields.type !== prior.type)
-    throw new HttpError(
-      409,
-      "The revision must use the existing document type",
-    );
-  const key = objectKey();
-  const stored = await putPdf(key, file.buffer);
-  const [document] = await createBatch([
-    {
-      id,
-      key,
-      ...stored,
-      expectedVersion: revisionInput?.expectedVersion ?? prior?.version,
-      title: prior?.title ?? fields.title ?? file.originalname,
-      type: fields.type ?? prior?.type ?? null,
+  const token = batchId.optional().parse(req.get("Idempotency-Key"));
+  const digest = createHash("sha256").update(file.buffer).digest("hex");
+  const fingerprint = JSON.stringify([file.originalname, fields, digest]);
+  const document = await replayUpload(
+    id ? "revision/" + id : "document",
+    token,
+    fingerprint,
+    async (connection) => {
+      const prior = id ? await revision(id, connection) : undefined;
+      if (prior && fields.type && fields.type !== prior.type)
+        throw new HttpError(
+          409,
+          "The revision must use the existing document type",
+        );
+      const key = objectKey();
+      const stored = await putPdf(key, file.buffer);
+      const [document] = await createBatch(
+        [
+          {
+            id,
+            key,
+            ...stored,
+            expectedVersion: revisionInput?.expectedVersion ?? prior?.version,
+            title: prior?.title ?? fields.title ?? file.originalname,
+            type: fields.type ?? prior?.type ?? null,
+          },
+        ],
+        connection,
+      );
+      return document;
     },
-  ]);
+  );
   res.status(202).location(`/documents/${document.id}`).json(document);
 };
 uploads.post("/documents", uploadLimit, multipart, receivePdf);
@@ -95,52 +113,63 @@ uploads.post("/uploads", uploadLimit, async (req, res) => {
     config.maxFileBytes,
     config.maxBatchFiles,
   ).parse(req.body);
-  const id = randomUUID();
-  const manifest: BatchFile[] = [];
-  const uploadTargets = [];
-  const revisions = new Set<string>();
-  for (const file of files) {
-    if (file.documentId && revisions.has(file.documentId))
-      throw new HttpError(
-        400,
-        "A batch may contain only one revision per document",
-      );
-    if (file.documentId) revisions.add(file.documentId);
-    const prior = file.documentId ? await revision(file.documentId) : undefined;
-    if (file.expectedVersion !== undefined && !prior)
-      throw new HttpError(400, "expectedVersion requires a documentId");
-    if (
-      prior &&
-      file.expectedVersion !== undefined &&
-      prior.version !== file.expectedVersion
-    )
-      throw new HttpError(
-        409,
-        "The document has a newer version. Refresh before uploading a revision.",
-      );
-    if (prior && file.type && prior.type !== file.type)
-      throw new HttpError(
-        409,
-        "The revision must use the existing document type",
-      );
-    const key = objectKey();
-    const itemId = randomUUID();
-    manifest.push({
-      id: itemId,
-      key,
-      documentId: file.documentId,
-      expectedVersion: prior?.version,
-      type: prior?.type ?? file.type ?? null,
-      title: prior?.title ?? file.name,
-      size: file.size,
-    });
-    uploadTargets.push({
-      id: itemId,
-      ...(await presignUpload(key, file.size)),
-    });
-  }
-  await saveBatch(id, manifest);
-  res.status(201).json({ batchId: id, uploads: uploadTargets });
+  const token = batchId.optional().parse(req.get("Idempotency-Key"));
+  const receipt = await replayUpload(
+    "manifest",
+    token,
+    JSON.stringify(files),
+    async (connection) => {
+      const id = randomUUID();
+      const manifest: BatchFile[] = [];
+      const uploadTargets = [];
+      const revisions = new Set<string>();
+      for (const file of files) {
+        if (file.documentId && revisions.has(file.documentId))
+          throw new HttpError(
+            400,
+            "A batch may contain only one revision per document",
+          );
+        if (file.documentId) revisions.add(file.documentId);
+        const prior = file.documentId
+          ? await revision(file.documentId, connection)
+          : undefined;
+        if (file.expectedVersion !== undefined && !prior)
+          throw new HttpError(400, "expectedVersion requires a documentId");
+        if (
+          prior &&
+          file.expectedVersion !== undefined &&
+          prior.version !== file.expectedVersion
+        )
+          throw new HttpError(
+            409,
+            "The document has a newer version. Refresh before uploading a revision.",
+          );
+        if (prior && file.type && prior.type !== file.type)
+          throw new HttpError(
+            409,
+            "The revision must use the existing document type",
+          );
+        const key = objectKey();
+        const itemId = randomUUID();
+        manifest.push({
+          id: itemId,
+          key,
+          documentId: file.documentId,
+          expectedVersion: prior?.version,
+          type: prior?.type ?? file.type ?? null,
+          title: prior?.title ?? file.name,
+          size: file.size,
+        });
+        uploadTargets.push({
+          id: itemId,
+          ...(await presignUpload(key, file.size)),
+        });
+      }
+      await saveBatch(id, manifest, connection);
+      return { batchId: id, uploads: uploadTargets };
+    },
+  );
+  res.status(201).json(receipt);
 });
 
 uploads.post("/uploads/:batchId/complete", uploadLimit, async (req, res) => {

@@ -158,8 +158,12 @@ export async function listDocumentPage(limit: number, cursor?: string) {
   };
 }
 
-export async function getDocument(id: string, version?: number) {
-  const result = await db.execute<
+export async function getDocument(
+  id: string,
+  version?: number,
+  connection: Pick<typeof db, "execute"> = db,
+) {
+  const result = await connection.execute<
     Summary & {
       versionId: string;
       parsedText: string | null;
@@ -173,7 +177,7 @@ export async function getDocument(id: string, version?: number) {
     order by v.version desc limit 1`);
   if (!result.rows[0]) throw new ApiError(404, "Document or version not found");
   const { versionId, ...doc } = result.rows[0];
-  const values = await db.execute<{
+  const values = await connection.execute<{
     id: string;
     field: string;
     value: string | null;
@@ -239,7 +243,7 @@ export async function retryDocument(id: string) {
     if (!doc.rowCount) throw new ApiError(404, "Document not found");
     const traceparent = currentTraceparent();
     const changed =
-      await tx.execute(sql`update document_versions set status='queued', error=null, updated_at=now(),
+      await tx.execute(sql`update document_versions set status='queued', cycle_attempts=0, eligible_at=now(), error=null, updated_at=now(),
         metadata=(metadata - 'traceparent') || ${JSON.stringify(traceparent ? { traceparent } : {})}::jsonb
       where doc_id=${id} and status='failed' and version=(select max(version) from document_versions where doc_id=${id})`);
     if (!changed.rowCount)
