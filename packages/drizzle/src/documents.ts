@@ -13,6 +13,7 @@ export type Review = {
 export type StoredUpload = {
   id?: string;
   seedId?: string;
+  expectedVersion?: number;
   title: string;
   type: DocumentType | null;
   key: string;
@@ -70,6 +71,14 @@ export async function createBatch(
         }>(sql`
           select version,status,document_type from document_versions where doc_id=${id} order by version desc limit 1`);
         const last = previous.rows[0]!;
+        if (
+          item.expectedVersion !== undefined &&
+          item.expectedVersion !== last.version
+        )
+          throw new ApiError(
+            409,
+            "The document has a newer version. Refresh before uploading a revision.",
+          );
         if (last.status === "extracting" || last.status === "queued")
           throw new ApiError(409, "Wait for the current extraction to finish");
         if (type && last.document_type && type !== last.document_type)

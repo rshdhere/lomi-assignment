@@ -616,6 +616,10 @@ components:
                 description: At most maxFileBytes from GET /limits.
               type:
                 "$ref": "#/components/schemas/DocumentType"
+              expectedVersion:
+                type: integer
+                minimum: 1
+                description: Revision base observed by the caller. Requires documentId.
               documentId:
                 type: string
                 pattern: "^[\\w-]{1,128}$"
@@ -626,7 +630,8 @@ components:
           minItems: 1
           description:
             At most maxBatchFiles from GET /limits. Each existing document
-            may appear once.
+            may appear once. Completion returns 409 if a revision target has advanced
+            since its upload manifest was issued.
       required:
         - files
       additionalProperties: false
@@ -749,6 +754,10 @@ components:
     NewVersion:
       type: object
       properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: Revision base observed by the caller.
         type:
           "$ref": "#/components/schemas/DocumentType"
         file:

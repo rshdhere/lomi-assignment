@@ -40,6 +40,7 @@ export function batchManifest(maxBytes: number, maxFiles: number) {
               size: z.number().int().min(1).max(maxBytes),
               type: documentType.optional(),
               documentId: identifier.optional(),
+              expectedVersion: z.number().int().positive().optional(),
             })
             .strict(),
         )
@@ -74,5 +75,7 @@ export type UploadFile = z.infer<
 >["files"][number];
 
 export const batchId = z.uuid();
-export const revisionFields = uploadFields.partial();
+export const revisionFields = uploadFields
+  .partial()
+  .extend({ expectedVersion: versionNumber.optional() });
 export { ZodError } from "zod";

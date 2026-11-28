@@ -506,6 +506,7 @@ export default function Home() {
       {(modal === "upload" || modal === "revision") && (
         <Upload
           documentId={modal === "revision" ? id : undefined}
+          expectedVersion={modal === "revision" ? doc?.version : undefined}
           close={() => setModal(null)}
           done={uploaded}
         />

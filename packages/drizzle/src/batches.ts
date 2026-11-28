@@ -10,6 +10,7 @@ export type BatchFile = {
   size: number;
   type: "invoice" | "lease" | "market_report" | null;
   documentId?: string;
+  expectedVersion?: number;
   objectVersion?: string;
   contentHash?: string;
 };
