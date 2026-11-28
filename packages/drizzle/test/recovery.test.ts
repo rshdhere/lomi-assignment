@@ -16,6 +16,7 @@ import {
   failClaim,
   getExtractionQueueSnapshot,
   scheduledVersions,
+  renewClaim,
   reviewedSources,
   searchChunks,
   type Value,
@@ -73,7 +74,17 @@ test(
       const interrupted = await getExtractionQueueSnapshot();
       assert.ok(interrupted.extracting >= 1);
       assert.ok(interrupted.expiredClaims >= 1);
+      const overdue = (await claimVersion(first))!;
+      await db.execute(
+        sql`update document_versions set attempt_deadline=now()-interval '1 second' where version_id=${first}`,
+      );
+      await renewClaim(overdue);
+      assert.equal(
+        await finishClaim(overdue, "late", "invoice", [], [], {}),
+        false,
+      );
       const fresh = (await claimVersion(first))!;
+      assert.equal(fresh.attempt, 3);
       await failClaim(stale, "stale response");
       assert.equal((await getDocument(doc!.id)).status, "extracting");
       const text = "Meridian LLC\nInvoice 01\nTotal 10";

@@ -22,6 +22,7 @@ export type Claim = {
   objectVersion: string;
   type: DocumentType | null;
   token: string;
+  attempt: number;
 };
 
 /** Durable backlog, including work not currently present in Redis. */
@@ -46,18 +47,21 @@ export async function scheduledVersions() {
       id: string;
       traceparent: string | null;
     }>(sql`select version_id as id, metadata->>'traceparent' as traceparent from document_versions
-    where status='queued' or (status='extracting' and lease_until<now()) order by updated_at limit 100`)
+    where (status='queued' and eligible_at<=now()) or (status='extracting' and lease_until<now()) order by updated_at limit 100`)
   ).rows;
 }
 export async function claimVersion(id: string): Promise<Claim | undefined> {
   return db.transaction(async (tx) => {
     const token = randomUUID();
+    await tx.execute(sql`update document_versions set status='failed',error='Extraction attempt budget exhausted after worker interruption',
+      claim_token=null,lease_until=null,updated_at=now()
+      where version_id=${id} and status='extracting' and lease_until<now() and cycle_attempts>=3`);
     const row = (
       await tx.execute<Claim>(sql`update document_versions set status='extracting',
-      claim_token=${token},lease_until=now()+interval '90 seconds',updated_at=now()
-      where version_id=${id} and (status='queued' or (status='extracting' and lease_until<now()))
+      cycle_attempts=cycle_attempts+1,attempt_deadline=now()+interval '10 minutes',claim_token=${token},lease_until=now()+interval '90 seconds',updated_at=now()
+      where version_id=${id} and ((status='queued' and eligible_at<=now()) or (status='extracting' and lease_until<now()))
       returning version_id as "versionId",doc_id as id,version,object_key as key,
-      object_version as "objectVersion",document_type as type,claim_token as token`)
+      object_version as "objectVersion",document_type as type,claim_token as token,cycle_attempts as attempt`)
     ).rows[0];
     if (row)
       await tx.execute(
@@ -67,7 +71,7 @@ export async function claimVersion(id: string): Promise<Claim | undefined> {
   });
 }
 export async function renewClaim(claim: Claim) {
-  await db.execute(sql`update document_versions set lease_until=now()+interval '90 seconds'
+  await db.execute(sql`update document_versions set lease_until=least(now()+interval '90 seconds',attempt_deadline)
     where version_id=${claim.versionId} and claim_token=${claim.token}`);
 }
 export async function recordAttempt(
@@ -79,12 +83,16 @@ export async function recordAttempt(
     sql`update extraction_attempts set prompt=${prompt},raw_response=${raw} where claim_token=${token}`,
   );
 }
-export async function failClaim(claim: Claim, error: string) {
+export async function failClaim(
+  claim: Claim,
+  error: string,
+  retryDelayMs?: number,
+) {
   await db.transaction(async (tx) => {
     await tx.execute(
       sql`update extraction_attempts set error=${error} where claim_token=${claim.token}`,
     );
-    await tx.execute(sql`update document_versions set status='failed',error=${error},claim_token=null,
+    await tx.execute(sql`update document_versions set status=${retryDelayMs !== undefined && claim.attempt < 3 ? "queued" : "failed"},eligible_at=now()+${retryDelayMs ?? 0}::double precision * interval '1 millisecond',error=${error},claim_token=null,
       lease_until=null,updated_at=now() where version_id=${claim.versionId} and claim_token=${claim.token}`);
   });
 }
@@ -109,7 +117,7 @@ export async function finishClaim(
   return db.transaction(async (tx) => {
     const own =
       await tx.execute(sql`select 1 from document_versions where version_id=${claim.versionId}
-      and claim_token=${claim.token} for update`);
+      and claim_token=${claim.token} and (attempt_deadline is null or attempt_deadline>now()) for update`);
     if (!own.rowCount) return false;
     const previous = await tx.execute<{
       id: string;

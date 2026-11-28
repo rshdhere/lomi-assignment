@@ -222,7 +222,7 @@ export async function retryDocument(id: string) {
     if (!doc.rowCount) throw new ApiError(404, "Document not found");
     const traceparent = currentTraceparent();
     const changed =
-      await tx.execute(sql`update document_versions set status='queued', error=null, updated_at=now(),
+      await tx.execute(sql`update document_versions set status='queued', cycle_attempts=0, eligible_at=now(), error=null, updated_at=now(),
         metadata=(metadata - 'traceparent') || ${JSON.stringify(traceparent ? { traceparent } : {})}::jsonb
       where doc_id=${id} and status='failed' and version=(select max(version) from document_versions where doc_id=${id})`);
     if (!changed.rowCount)
