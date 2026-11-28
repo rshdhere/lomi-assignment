@@ -37,9 +37,9 @@ const multipart = multer({
   limits: {
     fileSize: config.maxFileBytes,
     files: 1,
-    fields: 2,
+    fields: 3,
     fieldSize: 1000,
-    parts: 4,
+    parts: 5,
   },
 }).single("file");
 
@@ -66,7 +66,8 @@ const receivePdf: RequestHandler = async (req, res) => {
   const id =
     req.params.id === undefined ? undefined : identifier.parse(req.params.id);
   const prior = id ? await revision(id) : undefined;
-  const fields = (prior ? revisionFields : uploadFields).parse(req.body);
+  const revisionInput = prior ? revisionFields.parse(req.body) : undefined;
+  const fields = revisionInput ?? uploadFields.parse(req.body);
   if (prior && fields.type && fields.type !== prior.type)
     throw new HttpError(
       409,
@@ -79,6 +80,7 @@ const receivePdf: RequestHandler = async (req, res) => {
       id,
       key,
       ...stored,
+      expectedVersion: revisionInput?.expectedVersion ?? prior?.version,
       title: prior?.title ?? fields.title ?? file.originalname,
       type: fields.type ?? prior?.type ?? null,
     },
@@ -105,6 +107,17 @@ uploads.post("/uploads", uploadLimit, async (req, res) => {
       );
     if (file.documentId) revisions.add(file.documentId);
     const prior = file.documentId ? await revision(file.documentId) : undefined;
+    if (file.expectedVersion !== undefined && !prior)
+      throw new HttpError(400, "expectedVersion requires a documentId");
+    if (
+      prior &&
+      file.expectedVersion !== undefined &&
+      prior.version !== file.expectedVersion
+    )
+      throw new HttpError(
+        409,
+        "The document has a newer version. Refresh before uploading a revision.",
+      );
     if (prior && file.type && prior.type !== file.type)
       throw new HttpError(
         409,

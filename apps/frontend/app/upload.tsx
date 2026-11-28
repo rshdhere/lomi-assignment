@@ -15,13 +15,16 @@ interface Limits {
 
 export function Upload({
   documentId,
+  expectedVersion,
   close,
   done,
 }: {
   documentId?: string;
+  expectedVersion?: number;
   close: () => void;
   done: (id: string) => void;
 }) {
+  const [baseVersion] = useState(expectedVersion);
   const [limits, setLimits] = useState<Limits>();
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [batch, setBatch] = useState<UploadBatch>();
@@ -84,7 +87,7 @@ export function Upload({
           files: entries.map(({ file, type }) => ({
             name: file.name,
             size: file.size,
-            ...(documentId ? { documentId } : {}),
+            ...(documentId ? { documentId, expectedVersion: baseVersion } : {}),
             ...(type ? { type } : {}),
           })),
         }));
