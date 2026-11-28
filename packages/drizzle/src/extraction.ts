@@ -113,6 +113,7 @@ export async function finishClaim(
   values: Value[],
   chunks: Chunk[],
   metadata: Record<string, unknown>,
+  pendingSections?: Omit<Chunk, "embedding">[],
 ) {
   return db.transaction(async (tx) => {
     const own =
@@ -154,7 +155,11 @@ export async function finishClaim(
       await tx.execute(sql`insert into chunks(version_id,doc_id,doc_type,metadata,text,embedding)
         values (${claim.versionId},${claim.id},${type},${JSON.stringify(chunk.metadata)}::jsonb,${chunk.text},${JSON.stringify(chunk.embedding)}::vector)`);
     }
-    await tx.execute(sql`update document_versions set parsed_text=${text}, document_type=${type},
+    if (pendingSections)
+      await tx.execute(
+        sql`insert into stage_work(version_id,stage,sections) values(${claim.versionId},'index',${JSON.stringify(pendingSections)}::jsonb)`,
+      );
+    await tx.execute(sql`update document_versions set indexing_status=${pendingSections ? "queued" : "ready"}, parsed_text=${text}, document_type=${type},
       metadata=metadata || ${JSON.stringify(metadata)}::jsonb,status='extracted',error=null,claim_token=null,lease_until=null,updated_at=now()
       where version_id=${claim.versionId}`);
     return true;
@@ -230,17 +235,71 @@ export async function reviewedSources(
 // A short publication lease covers both a missed Redis write and a later Redis flush.
 export async function reserveExtractionOffers() {
   return (
-    await db.execute<{ id: string; traceparent: string | null }>(sql`
+    await db.execute<{
+      id: string;
+      stage: string;
+      traceparent: string | null;
+    }>(sql`
     with due as (
       select w.version_id,w.stage,w.generation,v.metadata->>'traceparent' as traceparent
       from stage_work w join document_versions v using(version_id)
-      where w.stage='extract' and w.next_offer_at<=now()
+      where w.next_offer_at<=now()
         and ((v.status='queued' and v.eligible_at<=now())
-          or (v.status='extracting' and v.lease_until<now()))
+          or (v.status='extracting' and v.lease_until<now()) or (w.stage='index' and v.indexing_status in ('queued','indexing')))
       order by w.next_offer_at,w.version_id limit 100 for update of w skip locked
     )
     update stage_work w set next_offer_at=now()+interval '10 seconds'
     from due where (w.version_id,w.stage,w.generation)=(due.version_id,due.stage,due.generation)
-    returning w.version_id as id,due.traceparent`)
+    returning w.version_id as id,w.stage,due.traceparent`)
   ).rows;
+}
+
+export async function claimIndex(id: string) {
+  const token = randomUUID();
+  return db.transaction(async (tx) => {
+    const claimed = await tx.execute<{
+      sections: Omit<Chunk, "embedding">[];
+    }>(sql`
+      update stage_work set owner_token=${token}, next_offer_at=now()+interval '10 minutes'
+      where version_id=${id} and stage='index' and ((owner_token is null and exists(select 1 from document_versions where version_id=${id} and indexing_status='queued')) or exists(
+        select 1 from document_versions where version_id=${id} and indexing_status='indexing'
+        and updated_at < now()-interval '10 minutes')) returning sections`);
+    if (!claimed.rows[0]) return;
+    await tx.execute(
+      sql`update document_versions set indexing_status='indexing',updated_at=now() where version_id=${id}`,
+    );
+    return { token, sections: claimed.rows[0].sections };
+  });
+}
+export async function completeIndex(
+  id: string,
+  token: string,
+  result: Chunk[] | string,
+) {
+  return db.transaction(async (tx) => {
+    const owned = await tx.execute(
+      sql`select 1 from stage_work where version_id=${id} and stage='index' and owner_token=${token} for update`,
+    );
+    if (!owned.rowCount) return false;
+    if (typeof result === "string") {
+      await tx.execute(
+        sql`update document_versions set indexing_status='failed',indexing_error=${result},updated_at=now() where version_id=${id}`,
+      );
+      await tx.execute(
+        sql`update stage_work set owner_token=null,next_offer_at=now() where version_id=${id} and stage='index'`,
+      );
+    } else {
+      for (const chunk of result)
+        await tx.execute(sql`insert into chunks(version_id,doc_id,doc_type,metadata,text,embedding)
+        select version_id,doc_id,document_type,${JSON.stringify(chunk.metadata)}::jsonb,${chunk.text},${JSON.stringify(chunk.embedding)}::vector
+        from document_versions where version_id=${id}`);
+      await tx.execute(
+        sql`update document_versions set indexing_status='ready',indexing_error=null,updated_at=now() where version_id=${id}`,
+      );
+      await tx.execute(
+        sql`delete from stage_work where version_id=${id} and stage='index'`,
+      );
+    }
+    return true;
+  });
 }

@@ -420,6 +420,12 @@ components:
     DocumentSummary:
       type: object
       properties:
+        extractionStatus:
+          type: string
+          enum: [queued, extracting, extracted, failed]
+        indexingStatus:
+          type: string
+          enum: [waiting, queued, indexing, ready, failed]
         id:
           type: string
           pattern: "^[\\w-]{1,128}$"

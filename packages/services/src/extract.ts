@@ -63,34 +63,37 @@ export async function extractVersion(
     throw new Error("Invalid parser response");
   const values = validateValues(fields, parsed.values, text);
   const sections = segmentText(text, parsed.sectionStartLines);
-  const vectors = async () => {
-    const all: number[][] = [];
-    for (let i = 0; i < sections.length; i += 32)
-      all.push(...(await embed(sections.slice(i, i + 32))));
-    return all;
-  };
-  const [embeddings, metadata] = await Promise.all([
-    extractionStage("embed sections", vectors),
-    Promise.resolve().then(() =>
-      sections.map((section, index) => ({
+  return {
+    values,
+    chunks: sections.map((section, index) => ({
+      text: section,
+      metadata: {
         section: index + 1,
         parser: parsers[type].split(".")[0],
         fields: values
           .filter((v) => v.quote && section.includes(v.quote))
           .map((v) => v.field),
-      })),
-    ),
-  ]);
-  return {
-    values,
-    chunks: sections.map((section, index) => ({
-      text: section,
-      embedding: embeddings[index]!,
-      metadata: metadata[index]!,
+      },
     })),
     metadata: {
       parser: parsers[type].split(".")[0],
       sections: sections.length,
     },
   };
+}
+
+export async function embedSections(
+  sections: { text: string; metadata: Record<string, unknown> }[],
+) {
+  const chunks = [];
+  for (let start = 0; start < sections.length; start += 32) {
+    const batch = sections.slice(start, start + 32);
+    const vectors = await extractionStage("embed sections", () =>
+      embed(batch.map((s) => s.text)),
+    );
+    chunks.push(
+      ...batch.map((section, i) => ({ ...section, embedding: vectors[i]! })),
+    );
+  }
+  return chunks;
 }

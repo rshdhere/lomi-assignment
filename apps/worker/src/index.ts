@@ -9,6 +9,8 @@ import { Queue, Worker } from "bullmq";
 import { config } from "@repo/config";
 import {
   claimVersion,
+  claimIndex,
+  completeIndex,
   getExtractionQueueSnapshot,
   failClaim,
   finishClaim,
@@ -20,6 +22,7 @@ import {
   TransientProviderError,
   classifyWithEvidence,
   extractVersion,
+  embedSections,
   parsePdf,
   readPdf,
 } from "@repo/services";
@@ -80,7 +83,7 @@ async function processVersion(
       },
     );
     const committed = await extractionStage("commit extraction", () =>
-      finishClaim(claim, text, type, values, chunks, metadata),
+      finishClaim(claim, text, type, values, [], metadata, chunks),
     );
     return committed ? "extracted" : "skipped";
   } catch (error) {
@@ -102,6 +105,21 @@ async function processVersion(
 const worker = new Worker<{ id: string; traceparent?: string }>(
   "extraction",
   async (job) => {
+    if (job.name === "index") {
+      const claim = await claimIndex(job.data.id);
+      if (!claim) return;
+      try {
+        const chunks = await embedSections(claim.sections);
+        await completeIndex(job.data.id, claim.token, chunks);
+      } catch (error) {
+        await completeIndex(
+          job.data.id,
+          claim.token,
+          error instanceof Error ? error.message : "Indexing failed",
+        );
+      }
+      return;
+    }
     const work = () => processVersion(job.data.id);
     if (observeAttempt) await observeAttempt(job.data.traceparent, work);
     else await work();
@@ -130,10 +148,14 @@ while (!stopping) {
   try {
     const jobs = await reserveExtractionOffers();
     await queue.addBulk(
-      jobs.map(({ id, traceparent }) => ({
-        name: "extract",
+      jobs.map(({ id, stage, traceparent }) => ({
+        name: stage,
         data: traceparent ? { id, traceparent } : { id },
-        opts: { jobId: id, removeOnComplete: true, removeOnFail: true },
+        opts: {
+          jobId: stage === "index" ? "index-" + id : id,
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
       })),
     );
   } catch (error) {

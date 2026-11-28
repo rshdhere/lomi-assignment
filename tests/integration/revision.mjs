@@ -373,6 +373,32 @@ if (recovery) {
   );
 }
 
+if (recovery) {
+  const provider = stack["model-double"];
+  let indexPath, before;
+  docker("exec", provider, "touch", "/tmp/lomi-reject-index");
+  try {
+    const doc = await request("/documents", pdfUpload(invoice), 202);
+    indexPath = "/documents/" + doc.id;
+    before = await until(indexPath, (d) => d.indexingStatus === "failed");
+    assert.equal(before.extractionStatus, "extracted");
+    assert.equal(before.values.length, 5);
+    await request(
+      "/values/" + before.values[0].id + "/review",
+      postJson({ action: "approve" }),
+    );
+  } finally {
+    docker("exec", provider, "rm", "-f", "/tmp/lomi-reject-index");
+  }
+  await request(indexPath + "/retry", { method: "POST" }, 202);
+  const after = await until(indexPath, (d) => d.indexingStatus === "ready");
+  assert.deepEqual(
+    after.values.map((v) => v.id),
+    before.values.map((v) => v.id),
+  );
+  assert.equal(after.values[0].review.action, "approve");
+}
+
 const batchPrefix = randomUUID();
 const files = ["first.pdf", "second.pdf"].map((suffix) => ({
   name: batchPrefix + "-" + suffix,

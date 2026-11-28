@@ -108,6 +108,7 @@ export async function createBatch(
 }
 
 type Summary = {
+  extractionStatus: Status;
   id: string;
   title: string;
   type: DocumentType | null;
@@ -126,7 +127,10 @@ type Summary = {
 
 const summary = sql`select d.doc_id as id, d.title, v.document_type as type, v.version,
   (select max(version) from document_versions where doc_id=d.doc_id) as "currentVersion",
-  v.status, v.error, v.updated_at as "updatedAt",
+  v.status as "extractionStatus",v.indexing_status as "indexingStatus",
+  case when v.status='extracted' and v.indexing_status in ('queued','indexing') then 'extracting'
+       when v.indexing_status='failed' then 'failed' else v.status end as status,
+  coalesce(v.indexing_error,v.error) as error, v.updated_at as "updatedAt",
   (select json_build_object(
     'pending',count(*) filter(where r.action is null),
     'approved',count(*) filter(where r.action='approve' and not e.carried_over),
@@ -254,6 +258,10 @@ export async function retryDocument(id: string) {
     );
     if (!doc.rowCount) throw new ApiError(404, "Document not found");
     const traceparent = currentTraceparent();
+    const indexing =
+      await tx.execute(sql`update document_versions set indexing_status='queued',indexing_error=null,updated_at=now()
+      where doc_id=${id} and indexing_status='failed' and version=(select max(version) from document_versions where doc_id=${id})`);
+    if (indexing.rowCount) return;
     const changed =
       await tx.execute(sql`update document_versions set status='queued', cycle_attempts=0, eligible_at=now(), error=null, updated_at=now(),
         metadata=(metadata - 'traceparent') || ${JSON.stringify(traceparent ? { traceparent } : {})}::jsonb
